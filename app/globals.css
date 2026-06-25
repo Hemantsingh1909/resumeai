@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Default/Fallback dark mode tokens */
+  --background: #000000;
+  --foreground: #fafafa;
+
+  --color-primary-val: #ffffff;
+  --color-on-primary-val: #000000;
+  --color-ink-val: #ffffff;
+  --color-body-val: #a1a1a1;
+  --color-mute-val: #666666;
+  --color-hairline-val: #1f1f1f;
+  --color-hairline-strong-val: #444444;
+  --color-canvas-val: #0a0a0a;
+  --color-canvas-soft-val: #000000;
+  --color-canvas-soft-2-val: #111111;
+  --color-link-val: #3291ff;
+  --color-link-deep-val: #0070f3;
+  --color-link-bg-soft-val: rgba(0, 112, 243, 0.1);
+  --color-success-val: #3291ff;
+  --color-error-val: #ff3333;
+  --color-error-soft-val: rgba(255, 51, 51, 0.1);
+  --color-error-deep-val: #ff0000;
+  --color-warning-val: #f5a623;
+  --color-warning-soft-val: rgba(245, 166, 35, 0.1);
+  --color-warning-deep-val: #ab570a;
+
+  /* Custom Violet and Highlight Pink Tokens */
+  --color-violet-val: #7928ca;
+  --color-violet-soft-val: #d8ccf1;
+  --color-violet-deep-val: #4c2889;
+  --color-highlight-pink-val: #ff0080;
+  --color-highlight-magenta-val: #eb367f;
+
+  --shadow-level-1-val: 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  --shadow-level-2-val: 0px 1px 1px rgba(0, 0, 0, 0.2), 0px 2px 2px rgba(0, 0, 0, 0.4), inset 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  --shadow-level-3-val: 0px 2px 2px rgba(0, 0, 0, 0.4), 0px 8px 8px -8px rgba(0, 0, 0, 0.4), inset 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  --shadow-level-4-val: 0px 2px 2px rgba(0, 0, 0, 0.4), 0px 8px 16px -4px rgba(0, 0, 0, 0.4), inset 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  --shadow-level-5-val: 0px 1px 1px rgba(0, 0, 0, 0.2), 0px 8px 16px -4px rgba(0, 0, 0, 0.4), 0px 24px 32px -8px rgba(0, 0, 0, 0.6), inset 0px 0px 0px 1px rgba(255, 255, 255, 0.08);
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-geist-sans), Geist, Inter, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), Geist Mono, ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Custom brand variables mapped to classes */
+  --color-primary: var(--color-primary-val);
+  --color-on-primary: var(--color-on-primary-val);
+  --color-ink: var(--color-ink-val);
+  --color-body-text: var(--color-body-val);
+  --color-mute: var(--color-mute-val);
+  --color-hairline: var(--color-hairline-val);
+  --color-hairline-strong: var(--color-hairline-strong-val);
+  --color-canvas: var(--color-canvas-val);
+  --color-canvas-soft: var(--color-canvas-soft-val);
+  --color-canvas-soft-2: var(--color-canvas-soft-2-val);
+  --color-link: var(--color-link-val);
+  --color-link-deep: var(--color-link-deep-val);
+  --color-link-bg-soft: var(--color-link-bg-soft-val);
+  --color-success: var(--color-success-val);
+  --color-error: var(--color-error-val);
+  --color-error-soft: var(--color-error-soft-val);
+  --color-error-deep: var(--color-error-deep-val);
+  --color-warning: var(--color-warning-val);
+  --color-warning-soft: var(--color-warning-soft-val);
+  --color-warning-deep: var(--color-warning-deep-val);
+
+  --color-violet: var(--color-violet-val);
+  --color-violet-soft: var(--color-violet-soft-val);
+  --color-violet-deep: var(--color-violet-deep-val);
+  --color-highlight-pink: var(--color-highlight-pink-val);
+  --color-highlight-magenta: var(--color-highlight-magenta-val);
+
+  --shadow-level-1: var(--shadow-level-1-val);
+  --shadow-level-2: var(--shadow-level-2-val);
+  --shadow-level-3: var(--shadow-level-3-val);
+  --shadow-level-4: var(--shadow-level-4-val);
+  --shadow-level-5: var(--shadow-level-5-val);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill-sm: 64px;
+  --radius-pill: 100px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas-soft);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }

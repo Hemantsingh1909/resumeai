@@ -5,21 +5,27 @@ import { Check, Sparkles } from "lucide-react";
 
 interface PricingCardProps {
   title: string;
-  price: string;
+  priceMonthly: string;
+  priceYearly: string;
   subtitle: string;
   features: string[];
   popular?: boolean;
   button: string;
+  billingCycle: "monthly" | "yearly";
 }
 
 export default function PricingCard({
   title,
-  price,
+  priceMonthly,
+  priceYearly,
   subtitle,
   features,
   popular = false,
   button,
+  billingCycle,
 }: PricingCardProps) {
+  const displayPrice = billingCycle === "monthly" ? priceMonthly : priceYearly;
+
   return (
     <motion.div
       whileHover={{
@@ -30,48 +36,69 @@ export default function PricingCard({
       className={`
         relative
         overflow-hidden
-        rounded-2xl
+        rounded-lg
         border
+        border-hairline
         p-8
         transition-all
         duration-300
         ${
           popular
-            ? "border-indigo-500/60 bg-gradient-to-br from-indigo-600/95 to-indigo-700/95 text-white shadow-2xl"
-            : "border-zinc-200/50 bg-white/60 hover:bg-white/80 dark:border-zinc-800/50 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/60 shadow-sm hover:shadow-md"
+            ? "bg-white text-zinc-950 shadow-2xl border-transparent"
+            : "bg-canvas text-ink shadow-level-4"
         }
       `}
     >
       {popular && (
-        <div className="absolute right-6 top-6 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-          <Sparkles size={13} strokeWidth={2} />
+        <div className="absolute right-6 top-6 inline-flex items-center gap-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-50 px-3 py-1 text-xs font-medium">
+          <Sparkles size={13} strokeWidth={2} className="text-violet-400" />
           Popular
         </div>
       )}
 
       <div>
-        <h3 className={`text-2xl font-bold ${popular ? "text-white" : "text-zinc-900 dark:text-white"}`}>
+        <h3 className={`text-2xl font-semibold ${popular ? "text-zinc-950" : "text-ink"}`}>
           {title}
         </h3>
 
         <p className={`mt-2 text-sm font-medium ${
-          popular ? "text-indigo-100" : "text-zinc-600 dark:text-zinc-400"
+          popular ? "text-zinc-500" : "text-mute"
         }`}>
           {subtitle}
         </p>
       </div>
 
-      <div className="mt-8 flex items-baseline gap-1">
-        <span className={`text-5xl font-bold ${popular ? "text-white" : "text-zinc-900 dark:text-white"}`}>
-          {price}
-        </span>
+      <div className="mt-8">
+        <div className="flex items-baseline gap-1">
+          <motion.span
+            key={displayPrice}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className={`text-5xl font-semibold inline-block ${popular ? "text-zinc-950" : "text-ink"}`}
+          >
+            {displayPrice}
+          </motion.span>
 
-        {title !== "Career Sprint" && (
-          <span className={`text-sm font-medium ${
-            popular ? "text-indigo-100" : "text-zinc-500 dark:text-zinc-400"
-          }`}>
-            /month
-          </span>
+          {title !== "Career Sprint" && (
+            <span className={`text-sm font-medium ${
+              popular ? "text-zinc-500" : "text-mute"
+            }`}>
+              /month
+            </span>
+          )}
+        </div>
+
+        {title === "Pro" && billingCycle === "yearly" && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`mt-1.5 text-xs font-medium ${
+              popular ? "text-zinc-500" : "text-mute"
+            }`}
+          >
+            Billed annually (₹4,788/yr)
+          </motion.p>
         )}
       </div>
 
@@ -79,26 +106,26 @@ export default function PricingCard({
         {features.map((feature) => (
           <div
             key={feature}
-            className="flex items-center gap-3"
+            className="flex-shrink-0 flex items-center gap-3"
           >
             <div className={`flex-shrink-0 h-5 w-5 rounded-full flex items-center justify-center ${
               popular 
-                ? "bg-white/20" 
-                : "bg-emerald-100 dark:bg-emerald-500/20"
+                ? "bg-zinc-100" 
+                : "bg-emerald-50 dark:bg-emerald-500/10"
             }`}>
               <Check
                 size={16}
                 strokeWidth={2.5}
                 className={
                   popular
-                    ? "text-white"
+                    ? "text-zinc-900"
                     : "text-emerald-600 dark:text-emerald-400"
                 }
               />
             </div>
 
             <span className={`text-sm font-medium ${
-              popular ? "text-white" : "text-zinc-700 dark:text-zinc-300"
+              popular ? "text-zinc-800" : "text-zinc-700 dark:text-zinc-300"
             }`}>
               {feature}
             </span>
@@ -112,15 +139,16 @@ export default function PricingCard({
         className={`
           mt-10
           w-full
-          rounded-xl
-          py-3.5
-          font-semibold
+          rounded-full
+          py-2.5
+          font-medium
           transition-all
           duration-200
+          cursor-pointer
           ${
             popular
-              ? "bg-white text-indigo-600 hover:bg-zinc-50 shadow-lg hover:shadow-xl"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+              ? "bg-zinc-950 text-white hover:bg-zinc-900 shadow-sm"
+              : "bg-primary text-on-primary hover:opacity-95 shadow-sm"
           }
         `}
       >

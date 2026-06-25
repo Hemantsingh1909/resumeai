@@ -1,6 +1,5 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
 import Navbar from "./components/landing/Navbar";
 import Hero from "./components/landing/hero/Hero";
 import StatsBar from "./components/landing/StatsBar";
@@ -14,7 +13,7 @@ import Integrations from "./components/landing/Integrations";
 
 export default function Home() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <>
       <Navbar />
       <Hero />
       <StatsBar />
@@ -25,6 +24,6 @@ export default function Home() {
       <FAQ />
       <CTA />
       <Footer />
-    </ThemeProvider>
+    </>
   );
 }

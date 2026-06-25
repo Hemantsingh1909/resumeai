@@ -11,7 +11,19 @@ interface KeywordCardProps {
   matched?: string[];
   missing?: string[];
   suggested?: string[];
+  hoveredKeyword?: string | null;
+  onHoverKeyword?: (keyword: string | null) => void;
+  isScoreHovered?: boolean;
+  hoveredSection?: string | null;
+  simStep?: "idle" | "scanning" | "rewriting" | "done";
 }
+
+const sectionToKeywordsMap: Record<string, string[]> = {
+  "Professional Summary": ["Agile", "Microservices"],
+  "Experience": ["AWS", "Docker", "Redis", "CI/CD"],
+  "Skills": ["React", "JavaScript", "TypeScript", "REST APIs"],
+  "Projects": ["Jest", "Git"],
+};
 
 export default function KeywordCard({
   matched = [
@@ -32,6 +44,11 @@ export default function KeywordCard({
     "Agile",
     "Microservices",
   ],
+  hoveredKeyword,
+  onHoverKeyword,
+  isScoreHovered = false,
+  hoveredSection,
+  simStep = "idle",
 }: KeywordCardProps) {
   const total =
     matched.length + missing.length;
@@ -56,17 +73,22 @@ export default function KeywordCard({
       transition={{
         duration: 0.6,
       }}
-      className="
-      rounded-3xl
-      border
-      border-zinc-200/70
-      bg-white/70
-      backdrop-blur-xl
-      p-6
-      shadow-xl
-      dark:border-zinc-800
-      dark:bg-zinc-900/60
-    "
+      className={`
+        rounded-lg
+        border
+        bg-canvas/70
+        backdrop-blur-xl
+        p-6
+        transition-all
+        duration-500
+        ${
+          isScoreHovered || simStep === "done"
+            ? "border-violet/40 shadow-[0_0_35px_rgba(121,40,202,0.15)] scale-[1.01]"
+            : simStep === "scanning" || simStep === "rewriting"
+            ? "border-violet/30 bg-violet/5 shadow-[0_0_20px_rgba(121,40,202,0.1)] scale-[1.01] animate-pulse"
+            : "border-hairline shadow-level-3"
+        }
+      `}
     >
       {/* Header */}
 
@@ -86,10 +108,10 @@ export default function KeywordCard({
           </p>
         </div>
 
-        <div className="rounded-xl bg-violet-100 p-3 dark:bg-violet-500/20">
+        <div className="rounded-lg bg-violet-soft/30 dark:bg-violet/10 p-3">
           <Sparkles
             size={18}
-            className="text-violet-600"
+            className="text-violet"
           />
         </div>
       </div>
@@ -116,7 +138,7 @@ export default function KeywordCard({
             transition={{
               duration: 1.2,
             }}
-            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-600"
+            className="h-full rounded-full bg-gradient-to-r from-violet to-highlight-pink"
           />
         </div>
       </div>
@@ -134,6 +156,10 @@ export default function KeywordCard({
           }
           color="emerald"
           items={matched}
+          hoveredKeyword={hoveredKeyword}
+          onHoverKeyword={onHoverKeyword}
+          hoveredSection={hoveredSection}
+          simStep={simStep}
         />
 
         <KeywordSection
@@ -146,6 +172,10 @@ export default function KeywordCard({
           }
           color="amber"
           items={missing}
+          hoveredKeyword={hoveredKeyword}
+          onHoverKeyword={onHoverKeyword}
+          hoveredSection={hoveredSection}
+          simStep={simStep}
         />
 
         <KeywordSection
@@ -158,6 +188,10 @@ export default function KeywordCard({
           }
           color="violet"
           items={suggested}
+          hoveredKeyword={hoveredKeyword}
+          onHoverKeyword={onHoverKeyword}
+          hoveredSection={hoveredSection}
+          simStep={simStep}
         />
       </div>
     </motion.div>
@@ -169,11 +203,19 @@ function KeywordSection({
   items,
   icon,
   color,
+  hoveredKeyword,
+  onHoverKeyword,
+  hoveredSection,
+  simStep,
 }: {
   title: string;
   items: string[];
   icon: React.ReactNode;
   color: "emerald" | "amber" | "violet";
+  hoveredKeyword?: string | null;
+  onHoverKeyword?: (keyword: string | null) => void;
+  hoveredSection?: string | null;
+  simStep?: "idle" | "scanning" | "rewriting" | "done";
 }) {
   const colors = {
     emerald:
@@ -214,7 +256,15 @@ function KeywordSection({
             whileHover={{
               scale: 1.06,
             }}
-            className={`rounded-full border px-3 py-2 text-sm font-medium ${colors[color]}`}
+            onMouseEnter={() => onHoverKeyword?.(item)}
+            onMouseLeave={() => onHoverKeyword?.(null)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium cursor-pointer transition-all duration-200 select-none ${
+              hoveredKeyword === item || (hoveredSection && sectionToKeywordsMap[hoveredSection]?.includes(item))
+                ? "ring-2 ring-violet-500 scale-105 border-violet-400"
+                : simStep === "scanning"
+                ? "animate-pulse border-violet/30 bg-violet-500/10 text-violet"
+                : "hover:border-zinc-400 dark:hover:border-zinc-600"
+            } ${colors[color]}`}
           >
             {item}
           </motion.div>

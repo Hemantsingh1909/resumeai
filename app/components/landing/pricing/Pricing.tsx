@@ -1,12 +1,14 @@
 "use client";
-import PlanSelector from "./PlanSelector";
+
+import { useState } from "react";
 import { motion } from "framer-motion";
 import PricingCard from "./PricingCard";
 
 const plans = [
   {
     title: "Free",
-    price: "₹0",
+    priceMonthly: "₹0",
+    priceYearly: "₹0",
     subtitle: "Perfect for trying ResumeAI",
     button: "Start Free",
     features: [
@@ -18,7 +20,8 @@ const plans = [
   },
   {
     title: "Pro",
-    price: "₹499",
+    priceMonthly: "₹499",
+    priceYearly: "₹399",
     subtitle: "Everything you need to land interviews",
     popular: true,
     button: "Upgrade to Pro",
@@ -33,7 +36,8 @@ const plans = [
   },
   {
     title: "Career Sprint",
-    price: "₹999",
+    priceMonthly: "₹999",
+    priceYearly: "₹999",
     subtitle: "One-time payment for active job seekers",
     button: "Buy Now",
     features: [
@@ -47,6 +51,8 @@ const plans = [
 ];
 
 export default function Pricing() {
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
   return (
     <section
       id="pricing"
@@ -67,7 +73,7 @@ export default function Pricing() {
           }}
           className="mx-auto max-w-3xl text-center"
         >
-          <span className="inline-flex items-center rounded-full border border-indigo-200/50 bg-indigo-50/50 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
             Pricing
           </span>
 
@@ -80,6 +86,49 @@ export default function Pricing() {
           <p className="mt-6 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
             Choose the plan that fits your job search. Upgrade only when you need it.
           </p>
+
+          {/* Vercel-style Pill Toggle Container */}
+          <div className="mt-12 flex justify-center items-center gap-4">
+            <div className="relative flex rounded-full bg-zinc-900 border border-zinc-800 p-1">
+              <motion.div
+                className="absolute top-1 bottom-1 rounded-full bg-white shadow-sm"
+                animate={{
+                  left: billingCycle === "monthly" ? "4px" : "88px",
+                  width: "80px",
+                }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+
+              <button
+                onClick={() => setBillingCycle("monthly")}
+                className={`relative z-10 w-20 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer select-none text-center ${
+                  billingCycle === "monthly"
+                    ? "text-zinc-950 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle("yearly")}
+                className={`relative z-10 w-20 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer select-none text-center ${
+                  billingCycle === "yearly"
+                    ? "text-zinc-950 font-bold"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+
+            {/* Savings badge */}
+            <motion.span
+              animate={{ scale: billingCycle === "yearly" ? 1.05 : 1 }}
+              className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-400"
+            >
+              Save 20%
+            </motion.span>
+          </div>
         </motion.div>
 
         <div className="mt-20 grid gap-8 lg:grid-cols-3">
@@ -87,6 +136,7 @@ export default function Pricing() {
             <PricingCard
               key={plan.title}
               {...plan}
+              billingCycle={billingCycle}
             />
           ))}
         </div>

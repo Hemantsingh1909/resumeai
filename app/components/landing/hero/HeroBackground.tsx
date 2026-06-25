@@ -19,7 +19,7 @@ export default function HeroBackground() {
       />
 
       {/* Radial fade */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#FAFBFC_70%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,#09090B_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--color-canvas-soft)_70%)]" />
 
       {/* Premium gradient glow - refined */}
       <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-gradient-to-br from-indigo-400/15 via-purple-400/10 to-transparent blur-[140px]" />

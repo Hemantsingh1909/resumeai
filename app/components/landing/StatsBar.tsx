@@ -53,15 +53,13 @@ export default function StatsBar() {
           className="
             grid
             gap-6
-            rounded-2xl
+            rounded-lg
             border
-            border-zinc-200/50
-            bg-white/60
+            border-hairline
+            bg-canvas/80
             p-8
-            shadow-lg
+            shadow-level-3
             backdrop-blur-sm
-            dark:border-zinc-800/50
-            dark:bg-zinc-900/40
             md:grid-cols-2
             lg:grid-cols-4
           "
@@ -92,21 +90,19 @@ export default function StatsBar() {
                   scale: 1.02,
                 }}
                 className="
-                  rounded-xl
+                  rounded-md
                   border
                   border-transparent
                   p-6
                   transition-all
                   duration-300
-                  hover:border-indigo-200/50
-                  hover:bg-indigo-50/30
-                  dark:hover:border-indigo-500/20
-                  dark:hover:bg-indigo-500/5
+                  hover:border-hairline
+                  hover:bg-canvas-soft
                 "
               >
-                <div className="mb-5 inline-flex rounded-lg bg-indigo-100 dark:bg-indigo-500/15 p-2.5">
+                <div className="mb-5 inline-flex rounded-sm bg-violet-soft/30 dark:bg-violet/10 p-2.5">
                   <Icon
-                    className="text-indigo-600 dark:text-indigo-400"
+                    className="text-violet"
                     size={20}
                     strokeWidth={1.5}
                   />

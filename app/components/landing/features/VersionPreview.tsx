@@ -42,13 +42,11 @@ export default function VersionPreview() {
             h-52
             w-40
             origin-bottom
-            rounded-3xl
+            rounded-md
             border
-            border-zinc-200
-            bg-white
-            shadow-xl
-            dark:border-zinc-800
-            dark:bg-zinc-900
+            border-hairline
+            bg-canvas
+            shadow-level-3
           "
             style={{
               transform: `
@@ -90,10 +88,10 @@ export default function VersionPreview() {
             >
               {/* Header */}
 
-              <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+              <div className="flex items-center justify-between border-b border-hairline p-4">
                 <FileText
                   size={18}
-                  className="text-violet-600"
+                  className="text-violet"
                 />
 
                 <div
@@ -123,7 +121,7 @@ export default function VersionPreview() {
                   <div className="h-2 w-3/4 rounded bg-zinc-200 dark:bg-zinc-700" />
                 </div>
 
-                <div className="rounded-xl bg-violet-50 p-3 text-xs font-medium text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
+                <div className="rounded-sm border border-hairline bg-canvas-soft p-3 text-xs font-medium text-violet dark:text-violet-soft text-center">
                   ATS Optimized
                 </div>
               </div>

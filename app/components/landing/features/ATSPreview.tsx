@@ -59,7 +59,7 @@ export default function ATSPreview() {
               fill="transparent"
               strokeWidth="8"
               strokeLinecap="round"
-              stroke="#7C3AED"
+              stroke="var(--color-violet)"
               strokeDasharray={circumference}
               initial={{
                 strokeDashoffset: circumference,
@@ -139,7 +139,7 @@ export default function ATSPreview() {
                   delay: index * 0.15,
                   duration: 0.8,
                 }}
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                className="h-full rounded-full bg-gradient-to-r from-violet to-highlight-pink"
               />
             </div>
           </div>

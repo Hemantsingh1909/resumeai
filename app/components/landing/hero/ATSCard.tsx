@@ -9,10 +9,20 @@ import {
 
 interface ATSCardProps {
   score?: number;
+  hoveredKeyword?: string | null;
+  isScoreHovered?: boolean;
+  onHoverScore?: (hovered: boolean) => void;
+  hoveredSection?: string | null;
+  simStep?: "idle" | "scanning" | "rewriting" | "done";
 }
 
 export default function ATSCard({
   score = 94,
+  hoveredKeyword,
+  isScoreHovered = false,
+  onHoverScore,
+  hoveredSection,
+  simStep = "idle",
 }: ATSCardProps) {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
@@ -36,17 +46,22 @@ export default function ATSCard({
       whileHover={{
         y: -4,
       }}
-      className="
-      rounded-3xl
-      border
-      border-zinc-200/70
-      bg-white/70
-      backdrop-blur-xl
-      p-6
-      shadow-xl
-      dark:border-zinc-800
-      dark:bg-zinc-900/60
-    "
+      className={`
+        rounded-lg
+        border
+        bg-canvas/70
+        backdrop-blur-xl
+        p-6
+        transition-all
+        duration-500
+        ${
+          isScoreHovered || simStep === "done"
+            ? "border-violet/40 shadow-[0_0_35px_rgba(121,40,202,0.15)] scale-[1.01]"
+            : simStep === "scanning" || simStep === "rewriting"
+            ? "border-violet/30 bg-violet/5 shadow-[0_0_20px_rgba(121,40,202,0.1)] scale-[1.01] animate-pulse"
+            : "border-hairline shadow-level-3"
+        }
+      `}
     >
       {/* Header */}
 
@@ -61,9 +76,9 @@ export default function ATSCard({
           </h3>
         </div>
 
-        <div className="rounded-xl bg-violet-100 p-2 dark:bg-violet-500/20">
+        <div className="rounded-lg bg-violet-soft/30 dark:bg-violet/10 p-2">
           <Sparkles
-            className="text-violet-600"
+            className="text-violet"
             size={18}
           />
         </div>
@@ -72,7 +87,11 @@ export default function ATSCard({
       {/* Circle */}
 
       <div className="mt-8 flex justify-center">
-        <div className="relative h-36 w-36">
+        <div
+          onMouseEnter={() => onHoverScore?.(true)}
+          onMouseLeave={() => onHoverScore?.(false)}
+          className="relative h-36 w-36 cursor-pointer group"
+        >
           <svg
             className="-rotate-90"
             width="144"
@@ -113,12 +132,12 @@ export default function ATSCard({
               <linearGradient id="gradient">
                 <stop
                   offset="0%"
-                  stopColor="#8B5CF6"
+                  stopColor="#7928ca"
                 />
 
                 <stop
                   offset="100%"
-                  stopColor="#6D28D9"
+                  stopColor="#ff0080"
                 />
               </linearGradient>
             </defs>
@@ -131,14 +150,18 @@ export default function ATSCard({
                 opacity: 0,
               }}
               animate={{
-                scale: 1,
+                scale: isScoreHovered || simStep === "done" || simStep === "rewriting" ? 1.08 : 1,
                 opacity: 1,
               }}
               transition={{
-                delay: 0.5,
+                scale: { duration: 0.2 },
+                default: { delay: 0.5 }
               }}
+              className="text-center"
             >
-              <p className="text-4xl font-bold">
+              <p className={`text-4xl font-bold transition-colors duration-200 ${
+                isScoreHovered || simStep === "done" || simStep === "rewriting" ? "text-violet font-extrabold" : "text-ink"
+              }`}>
                 {score}
               </p>
 
@@ -162,7 +185,7 @@ export default function ATSCard({
         transition={{
           delay: 0.8,
         }}
-        className="mt-6 flex items-center justify-center gap-2 rounded-full bg-emerald-50 py-2 text-sm font-medium text-emerald-600 dark:bg-emerald-500/10"
+        className="mt-6 flex items-center justify-center gap-2 rounded-full bg-emerald-50 py-2 text-sm font-medium text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
       >
         <CheckCircle2 size={16} />
 
@@ -196,20 +219,28 @@ export default function ATSCard({
 
       {/* Footer */}
 
-      <div className="mt-8 flex items-center justify-between rounded-2xl border border-violet-200/60 bg-violet-50 p-4 dark:border-violet-500/20 dark:bg-violet-500/10">
+      <div className={`mt-8 flex items-center justify-between rounded-lg border p-4 transition-all duration-300 ${
+        hoveredKeyword === "Docker" || hoveredKeyword === "AWS" || hoveredKeyword === "CI/CD" || hoveredKeyword === "Redis" || hoveredSection === "Experience"
+          ? "border-violet bg-violet-soft/20 dark:bg-violet/20 shadow-[0_0_18px_rgba(121,40,202,0.15)] scale-[1.03]"
+          : "border-hairline bg-violet-soft/10"
+      }`}>
         <div>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium text-ink">
             AI Recommendation
           </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Add Docker & AWS experience to
             increase recruiter matching.
           </p>
         </div>
 
         <ArrowUpRight
-          className="text-violet-600"
+          className={`transition-all duration-300 ${
+            hoveredKeyword === "Docker" || hoveredKeyword === "AWS" || hoveredKeyword === "CI/CD" || hoveredKeyword === "Redis" || hoveredSection === "Experience"
+              ? "text-violet translate-x-0.5 -translate-y-0.5 scale-110"
+              : "text-zinc-400 dark:text-zinc-500"
+          }`}
           size={20}
         />
       </div>
@@ -232,23 +263,21 @@ function MetricCard({
         scale: 1.03,
       }}
       className="
-      rounded-2xl
+      rounded-md
       border
-      border-zinc-200/60
-      bg-zinc-50
+      border-hairline
+      bg-canvas-soft
       p-4
-      dark:border-zinc-800
-      dark:bg-zinc-900
     "
     >
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-mute font-mono">
         {title}
       </p>
 
       <p
-        className={`mt-2 text-lg font-semibold ${
+        className={`mt-2 text-lg font-semibold text-ink ${
           success
-            ? "text-emerald-600"
+            ? "text-emerald-600 dark:text-emerald-400"
             : ""
         }`}
       >

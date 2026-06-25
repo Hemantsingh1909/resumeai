@@ -4,13 +4,17 @@ import { motion } from "framer-motion";
 import {
   Briefcase,
   FileText,
-  Link,
+  Link2,
+  Building2,
+  Cpu,
+  Globe,
+  FileSpreadsheet,
 } from "lucide-react";
 
 const tools = [
   {
     name: "LinkedIn",
-    icon: Link,
+    icon: Link2,
   },
   {
     name: "Indeed",
@@ -18,100 +22,93 @@ const tools = [
   },
   {
     name: "Greenhouse",
-    icon: FileText,
+    icon: Building2,
   },
   {
     name: "Lever",
-    icon: Briefcase,
+    icon: Cpu,
   },
   {
     name: "Workday",
+    icon: Globe,
+  },
+  {
+    name: "PDF",
     icon: FileText,
   },
   {
-    name: "PDF & DOCX",
-    icon: FileText,
+    name: "DOCX",
+    icon: FileSpreadsheet,
   },
 ];
 
+// Triplicate the tools array to create a seamless infinite loop
+const marqueeItems = [...tools, ...tools, ...tools];
+
 export default function TrustedBy() {
   return (
-    <section className="py-20">
+    <section className="py-20 overflow-hidden bg-background">
       <div className="mx-auto max-w-7xl px-6">
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             Works seamlessly with
           </p>
 
-          <div className="mt-12 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            {tools.map((tool, index) => {
-              const Icon = tool.icon;
+          {/* Marquee Wrapper with fading edges */}
+          <div className="relative mt-12 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_15%,white_85%,transparent)]">
+            <motion.div
+              className="flex gap-6 w-max py-4"
+              animate={{
+                x: ["0%", "-33.333%"],
+              }}
+              transition={{
+                ease: "linear",
+                duration: 25,
+                repeat: Infinity,
+              }}
+            >
+              {marqueeItems.map((tool, index) => {
+                const Icon = tool.icon;
 
-              return (
-                <motion.div
-                  key={tool.name}
-                  initial={{
-                    opacity: 0,
-                    y: 20,
-                  }}
-                  whileInView={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  viewport={{
-                    once: true,
-                  }}
-                  transition={{
-                    delay: index * 0.08,
-                  }}
-                  whileHover={{
-                    y: -3,
-                    scale: 1.02,
-                  }}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    gap-2.5
-                    rounded-xl
-                    border
-                    border-zinc-200/50
-                    bg-white/60
-                    dark:border-zinc-800/50
-                    dark:bg-zinc-900/40
-                    px-5
-                    py-4
-                    shadow-sm
-                    hover:shadow-md
-                    transition-all
-                    hover:border-indigo-200/50
-                    dark:hover:border-indigo-500/20
-                    backdrop-blur-sm
-                  "
-                >
-                  <Icon
-                    size={18}
-                    strokeWidth={1.5}
-                    className="text-indigo-600 dark:text-indigo-400 flex-shrink-0"
-                  />
-
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {tool.name}
-                  </span>
-                </motion.div>
-              );
-            })}
+                return (
+                  <div
+                    key={`${tool.name}-${index}`}
+                    className="
+                      flex
+                      items-center
+                      gap-3
+                      rounded-full
+                      border
+                      border-hairline
+                      bg-canvas
+                      px-6
+                      py-3.5
+                      shadow-level-2
+                      hover:shadow-level-3
+                      hover:border-hairline-strong
+                      transition-all
+                      duration-200
+                      cursor-pointer
+                    "
+                  >
+                    <Icon
+                      size={16}
+                      strokeWidth={2}
+                      className="text-zinc-500 dark:text-zinc-400 flex-shrink-0"
+                    />
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 select-none">
+                      {tool.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </motion.div>
           </div>
         </motion.div>
       </div>

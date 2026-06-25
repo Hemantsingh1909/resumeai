@@ -40,14 +40,14 @@ export default function FloatingBlobs() {
       <motion.div
         animate={{ x: [0, 80, -40, 0], y: [0, -50, 60, 0], scale: [1, 1.15, 0.95, 1] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-[-120px] top-[-80px] h-[420px] w-[420px] rounded-full bg-violet-500/20 blur-[120px]"
+        className="absolute left-[-120px] top-[-80px] h-[420px] w-[420px] rounded-full bg-violet-500/10 blur-[120px]"
       />
 
       {/* Blue Blob */}
       <motion.div
         animate={{ x: [0, -60, 50, 0], y: [0, 40, -30, 0], scale: [1, 0.9, 1.1, 1] }}
         transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute right-[-100px] top-[120px] h-[360px] w-[360px] rounded-full bg-sky-500/15 blur-[110px]"
+        className="absolute right-[-100px] top-[120px] h-[360px] w-[360px] rounded-full bg-sky-500/10 blur-[110px]"
       />
 
       {/* Pink Blob */}

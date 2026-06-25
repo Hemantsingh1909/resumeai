@@ -17,17 +17,17 @@ export default function CoverLetterPreview() {
     <div className="flex h-full flex-col justify-between">
       {/* Window */}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="overflow-hidden rounded-md border border-hairline bg-canvas-soft">
         {/* Toolbar */}
 
-        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
           <div className="flex items-center gap-2">
             <Sparkles
               size={16}
-              className="text-violet-600"
+              className="text-violet"
             />
 
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-ink">
               AI Cover Letter
             </span>
           </div>
@@ -60,11 +60,11 @@ export default function CoverLetterPreview() {
 
           <p>
             I am excited to apply for the
-            <span className="font-semibold text-violet-600">
+            <span className="font-semibold text-violet">
               {" "}Software Engineer{" "}
             </span>
             role at
-            <span className="font-semibold text-violet-600">
+            <span className="font-semibold text-violet">
               {" "}Stripe
             </span>
             .
@@ -87,7 +87,7 @@ export default function CoverLetterPreview() {
               repeat: Infinity,
               duration: 1,
             }}
-            className="inline-block font-bold text-violet-600"
+            className="inline-block font-bold text-violet"
           >
             ▋
           </motion.span>
@@ -123,16 +123,13 @@ export default function CoverLetterPreview() {
               gap-2
               rounded-full
               border
-              border-violet-200
-              bg-violet-50
+              border-hairline
+              bg-violet-soft/20
               px-3
-              py-2
+              py-1
               text-xs
               font-medium
-              text-violet-700
-              dark:border-violet-500/20
-              dark:bg-violet-500/10
-              dark:text-violet-300
+              text-violet
             "
           >
             <CheckCircle2 size={14} />

@@ -31,18 +31,15 @@ export default function FAQItem({
       className="
         group
         overflow-hidden
-        rounded-xl
+        rounded-md
         border
-        border-zinc-200/50
-        bg-white/60
+        border-hairline
+        bg-canvas
         backdrop-blur-sm
         transition-all
         duration-300
-        hover:border-indigo-200/50
-        hover:shadow-md
-        dark:border-zinc-800/50
-        dark:bg-zinc-900/40
-        dark:hover:border-indigo-500/20
+        hover:border-hairline-strong
+        hover:shadow-level-3
       "
     >
       {/* Button */}
@@ -77,19 +74,16 @@ export default function FAQItem({
           }}
           className="
             flex
-            h-9
-            w-9
+            h-8
+            w-8
             shrink-0
             items-center
             justify-center
-            rounded-lg
-            bg-indigo-100/50
-            dark:bg-indigo-500/10
-            text-indigo-600
-            dark:text-indigo-400
+            rounded-sm
+            bg-violet-soft/20
+            text-violet
             transition-colors
-            group-hover:bg-indigo-100
-            dark:group-hover:bg-indigo-500/20
+            group-hover:bg-violet-soft/40
           "
         >
           <Plus size={18} strokeWidth={2} />

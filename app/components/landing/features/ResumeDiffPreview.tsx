@@ -22,7 +22,7 @@ export default function ResumeDiffPreview() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
+        className="rounded-md border border-hairline bg-canvas-soft p-4"
       >
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
           Before
@@ -46,7 +46,7 @@ export default function ResumeDiffPreview() {
         className="my-5 flex justify-center"
       >
         <ArrowDown
-          className="text-violet-500"
+          className="text-violet"
           size={22}
         />
       </motion.div>
@@ -69,13 +69,13 @@ export default function ResumeDiffPreview() {
           once: true,
         }}
         className="
-          rounded-2xl
+          rounded-md
           border
           border-emerald-200
-          bg-emerald-50
+          bg-emerald-50/50
           p-4
           dark:border-emerald-500/20
-          dark:bg-emerald-500/10
+          dark:bg-emerald-500/5
         "
       >
         <div className="flex items-center gap-2">
@@ -132,15 +132,15 @@ export default function ResumeDiffPreview() {
               rounded-full
               border
               border-emerald-200
-              bg-emerald-50
+              bg-emerald-50/50
               px-3
-              py-2
+              py-1
               text-xs
               font-medium
               text-emerald-700
               dark:border-emerald-500/20
-              dark:bg-emerald-500/10
-              dark:text-emerald-300
+              dark:bg-emerald-500/5
+              dark:text-emerald-400
             "
           >
             <CheckCircle2 size={14} />

@@ -22,25 +22,23 @@ export default function SupportCard() {
         relative
         mt-20
         overflow-hidden
-        rounded-2xl
+        rounded-lg
         border
-        border-zinc-200/50
-        bg-white/70
+        border-hairline
+        bg-canvas/70
         p-10
-        shadow-lg
+        shadow-level-4
         backdrop-blur-sm
-        dark:border-zinc-800/50
-        dark:bg-zinc-900/40
       "
     >
       {/* Background Glow */}
 
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-purple-500/5" />
+      <div className="absolute inset-0 bg-gradient-to-r from-violet/5 via-transparent to-highlight-pink/5" />
 
       <div className="relative z-10 flex flex-col items-center text-center">
         {/* Icon */}
 
-        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-100/50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-sm bg-violet-soft/30 dark:bg-violet/10 text-violet dark:text-violet-soft">
           <LifeBuoy size={28} strokeWidth={1.5} />
         </div>
 
@@ -72,15 +70,14 @@ export default function SupportCard() {
             inline-flex
             items-center
             gap-2
-            rounded-xl
-            bg-indigo-600
-            hover:bg-indigo-700
+            rounded-full
+            bg-primary
+            hover:opacity-90
             px-7
             py-3.5
-            font-semibold
-            text-white
-            shadow-lg
-            hover:shadow-xl
+            font-medium
+            text-on-primary
+            shadow-sm
             transition-all
             duration-200
           "
@@ -96,7 +93,7 @@ export default function SupportCard() {
 
         {/* Response Time */}
 
-        <div className="mt-8 inline-flex items-center gap-2 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30 px-3.5 py-2.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
+        <div className="mt-8 inline-flex items-center gap-2 rounded-sm border border-hairline bg-canvas-soft px-3.5 py-2 text-xs font-mono text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
           <Clock3 size={14} strokeWidth={1.5} />
           Average response time: under 24 hours
         </div>

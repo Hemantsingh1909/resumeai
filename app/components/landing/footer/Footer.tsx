@@ -1,8 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { GitBranch, Link as LinkIcon, Share2, Send, Sparkles } from "lucide-react";
+import { Github, Linkedin, Send, Sparkles } from "lucide-react";
 import FooterColumn from "./FooterColumn";
+
+const XIcon = ({ size = 18, className = "" }: { size?: number; className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="currentColor"
+    className={className}
+  >
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+const socialLinks = [
+  {
+    icon: XIcon,
+    href: "https://x.com/resumeai",
+    props: {},
+  },
+  {
+    icon: Linkedin,
+    href: "https://linkedin.com/company/resumeai",
+    props: { strokeWidth: 1.5 },
+  },
+  {
+    icon: Github,
+    href: "https://github.com/Hemantsingh1909/resumeai",
+    props: { strokeWidth: 1.5 },
+  },
+];
 
 const footerLinks = {
   product: [
@@ -27,11 +57,11 @@ const footerLinks = {
 
 export default function Footer() {
   return (
-    <footer className="border-t border-zinc-200/50 bg-white/60 dark:border-zinc-800/50 dark:bg-zinc-950/60 backdrop-blur-sm">
+    <footer className="border-t border-hairline bg-canvas-soft/80 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-20">
         {/* Newsletter */}
 
-        <div className="mb-20 rounded-2xl border border-zinc-200/50 bg-white/80 dark:border-zinc-800/50 dark:bg-zinc-900/40 p-10 backdrop-blur-sm">
+        <div className="mb-20 rounded-lg border border-hairline bg-canvas p-10 backdrop-blur-sm">
           <div className="grid items-center gap-8 lg:grid-cols-2">
             <div>
               <h3 className="text-3xl font-bold text-zinc-900 dark:text-white">
@@ -43,28 +73,23 @@ export default function Footer() {
               </p>
             </div>
 
-            <form className="flex flex-col gap-3 sm:flex-row">
+            <form className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 type="email"
                 placeholder="Enter your email"
                 className="
                   flex-1
-                  rounded-xl
+                  rounded-sm
                   border
-                  border-zinc-200
-                  bg-white/50
-                  px-5
-                  py-3.5
-                  text-zinc-950
+                  border-hairline
+                  bg-canvas-soft
+                  px-4
+                  h-10
+                  text-sm
+                  text-ink
                   outline-none
-                  placeholder:text-zinc-500
-                  focus:border-indigo-500
-                  focus:ring-1
-                  focus:ring-indigo-500/20
-                  dark:border-zinc-700
-                  dark:bg-zinc-900/50
-                  dark:text-white
-                  dark:placeholder:text-zinc-500
+                  placeholder:text-mute
+                  focus:border-hairline-strong
                   transition-all
                 "
               />
@@ -75,17 +100,17 @@ export default function Footer() {
                   items-center
                   justify-center
                   gap-2
-                  rounded-xl
-                  bg-indigo-600
-                  hover:bg-indigo-700
+                  rounded-sm
+                  bg-primary
+                  hover:opacity-90
                   px-6
-                  py-3.5
-                  font-semibold
-                  text-white
+                  h-10
+                  text-sm
+                  font-medium
+                  text-on-primary
                   transition-all
                   duration-200
                   shadow-sm
-                  hover:shadow-md
                 "
               >
                 <Send size={18} strokeWidth={1.5} />
@@ -105,11 +130,11 @@ export default function Footer() {
               href="/"
               className="inline-flex items-center gap-2"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 text-white">
+              <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary text-on-primary shadow-sm">
                 <Sparkles size={20} strokeWidth={1.5} />
               </div>
               <span className="text-2xl font-bold text-zinc-900 dark:text-white">
-                Resume<span className="text-indigo-600">AI</span>
+                Resume<span className="text-primary">AI</span>
               </span>
             </Link>
 
@@ -120,29 +145,31 @@ export default function Footer() {
             </p>
 
             <div className="mt-8 flex gap-3">
-              {[LinkIcon, Share2, GitBranch].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="
-                    rounded-lg
-                    border
-                    border-zinc-200
-                    dark:border-zinc-700
-                    p-2.5
-                    text-zinc-600
-                    dark:text-zinc-400
-                    hover:text-indigo-600
-                    hover:border-indigo-500/30
-                    dark:hover:text-indigo-400
-                    dark:hover:border-indigo-500/30
-                    transition-all
-                    duration-200
-                  "
-                >
-                  <Icon size={18} strokeWidth={1.5} />
-                </a>
-              ))}
+              {socialLinks.map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={i}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="
+                      rounded-lg
+                      border
+                      border-hairline
+                      p-2.5
+                      text-zinc-600
+                      dark:text-zinc-400
+                      hover:text-primary
+                      hover:border-primary
+                      transition-all
+                      duration-200
+                    "
+                  >
+                    <Icon size={18} {...item.props} className="flex-shrink-0" />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
@@ -164,15 +191,35 @@ export default function Footer() {
 
         {/* Bottom */}
 
-        <div className="mt-20 flex flex-col items-center justify-between gap-6 border-t border-zinc-200/50 dark:border-zinc-800/50 pt-8 text-sm text-zinc-600 dark:text-zinc-400">
-          <p className="text-center">
-            © 2026 ResumeAI. All rights reserved.
-          </p>
+        <div className="mt-20 flex flex-col items-center justify-between gap-6 border-t border-hairline pt-8 text-sm text-zinc-500 dark:text-zinc-400 md:flex-row md:gap-0">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
+            <p>© 2026 ResumeAI. All rights reserved.</p>
 
-          <p className="text-center">
-            🚀 Building in Public
-            <br />
-            Follow our journey →
+            {/* Desktop Vertical Divider */}
+            <div className="hidden h-4 w-px bg-hairline md:block" />
+
+            {/* Active Status Pulse */}
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 select-none">
+                All systems operational
+              </span>
+            </div>
+          </div>
+
+          <p className="text-center md:text-right">
+            🚀 Building in Public &bull; Follow our journey →{" "}
+            <Link
+              href="https://github.com/Hemantsingh1909/resumeai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:opacity-85 font-medium transition-opacity"
+            >
+              @resumeai
+            </Link>
           </p>
         </div>
       </div>

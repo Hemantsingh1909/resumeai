@@ -43,7 +43,7 @@ export default function HeroContent() {
       {/* Badge */}
 
       <motion.div variants={item}>
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200/50 bg-indigo-50/50 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
           <Sparkles size={14} strokeWidth={2} />
           AI-Powered Resume Optimization
         </div>
@@ -53,12 +53,12 @@ export default function HeroContent() {
 
       <motion.h1
         variants={item}
-        className="mt-8 text-5xl font-bold leading-tight tracking-tight text-zinc-950 dark:text-white md:text-7xl lg:text-7xl xl:text-8xl"
+        className="mt-8 text-5xl font-semibold leading-tight tracking-tight text-zinc-950 dark:text-white md:text-7xl lg:text-7xl xl:text-8xl"
       >
         Stop rewriting
         <br />
         your resume
-        <span className="block bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
+        <span className="block bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent">
           for every job.
         </span>
       </motion.h1>
@@ -80,7 +80,7 @@ export default function HeroContent() {
       >
         <Link
           href="/dashboard"
-          className="group inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-7 py-3.5 font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary hover:opacity-90 px-7 py-3.5 font-medium text-on-primary shadow-md transition-all duration-200"
         >
           Start Free
           <ArrowRight
@@ -90,7 +90,7 @@ export default function HeroContent() {
           />
         </Link>
 
-        <button className="group inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 dark:border-zinc-700 px-7 py-3.5 font-semibold text-zinc-900 dark:text-zinc-100 bg-white/50 dark:bg-zinc-900/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-all duration-200 backdrop-blur-sm">
+        <button className="group inline-flex items-center justify-center gap-2 rounded-full border border-hairline px-7 py-3.5 font-medium text-zinc-900 dark:text-zinc-100 bg-canvas hover:bg-canvas-soft transition-all duration-200 shadow-sm">
           <Play size={18} strokeWidth={2} />
           Watch Demo
         </button>
@@ -130,10 +130,10 @@ export default function HeroContent() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/20">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-link-bg-soft dark:bg-link/10">
               <Sparkles
                 size={16}
-                className="text-blue-600 dark:text-blue-400"
+                className="text-link"
                 strokeWidth={2.5}
               />
             </div>
@@ -143,10 +143,10 @@ export default function HeroContent() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-500/20">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-soft/30 dark:bg-violet/10">
               <CheckCircle2
                 size={16}
-                className="text-purple-600 dark:text-purple-400"
+                className="text-violet"
                 strokeWidth={2.5}
               />
             </div>

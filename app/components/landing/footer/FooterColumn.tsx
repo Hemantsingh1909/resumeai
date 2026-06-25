@@ -16,7 +16,7 @@ export default function FooterColumn({
 }: FooterColumnProps) {
   return (
     <div>
-      <h4 className="text-sm font-semibold uppercase tracking-wider text-zinc-900 dark:text-white">
+      <h4 className="text-xs font-mono font-medium uppercase tracking-wider text-zinc-900 dark:text-white">
         {title}
       </h4>
 
@@ -27,11 +27,12 @@ export default function FooterColumn({
               href={link.href}
               className="
                 text-sm
-                text-zinc-600
-                transition-colors
-                hover:text-violet-600
+                text-zinc-500
                 dark:text-zinc-400
-                dark:hover:text-violet-400
+                hover:text-zinc-900
+                dark:hover:text-white
+                transition-colors
+                duration-200
               "
             >
               {link.label}

@@ -50,11 +50,11 @@ export default function TimelineStep({
           w-14
           items-center
           justify-center
-          rounded-xl
-          bg-indigo-600
-          hover:bg-indigo-700
-          text-white
-          shadow-lg
+          rounded-sm
+          bg-primary
+          hover:opacity-90
+          text-on-primary
+          shadow-level-3
           transition-colors
           flex-shrink-0
         "
@@ -68,7 +68,7 @@ export default function TimelineStep({
               <ArrowDown size={16} strokeWidth={1.5} />
             </div>
 
-            <div className="h-24 w-0.5 bg-gradient-to-b from-indigo-500/50 to-transparent" />
+            <div className="h-24 w-0.5 bg-gradient-to-b from-primary/30 to-transparent" />
           </>
         )}
       </div>
@@ -76,7 +76,7 @@ export default function TimelineStep({
       {/* Content */}
 
       <div className="pb-12 pt-1 flex-1">
-        <span className="text-xs font-bold tracking-widest text-indigo-600 dark:text-indigo-400">
+        <span className="font-mono text-xs font-medium text-violet dark:text-violet-soft tracking-widest">
           STEP {number}
         </span>
 

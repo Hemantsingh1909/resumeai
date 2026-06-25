@@ -49,14 +49,12 @@ export default function ExportPreview() {
         className="
           relative
           w-52
-          rounded-3xl
+          rounded-md
           border
-          border-zinc-200
-          bg-white
+          border-hairline
+          bg-canvas
           p-6
-          shadow-xl
-          dark:border-zinc-800
-          dark:bg-zinc-900
+          shadow-level-3
         "
       >
         {/* Success Badge */}
@@ -92,7 +90,7 @@ export default function ExportPreview() {
           <div className="flex items-center gap-3">
             <FileText
               size={20}
-              className="text-violet-600"
+              className="text-violet"
             />
 
             <span className="font-semibold">
@@ -112,7 +110,7 @@ export default function ExportPreview() {
             <div className="h-2 w-4/5 rounded bg-zinc-200 dark:bg-zinc-700" />
           </div>
 
-          <div className="rounded-xl bg-emerald-50 p-3 text-center text-sm font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <div className="rounded-sm border border-emerald-200 bg-emerald-50/50 p-3 text-center text-sm font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-400">
             Ready to Apply
           </div>
         </div>
@@ -153,23 +151,19 @@ export default function ExportPreview() {
                 flex-col
                 items-center
                 gap-2
-                rounded-2xl
+                rounded-md
                 border
-                border-zinc-200
-                bg-zinc-50
+                border-hairline
+                bg-canvas-soft
                 py-4
                 transition
-                hover:border-violet-300
-                hover:bg-violet-50
-                dark:border-zinc-800
-                dark:bg-zinc-900
-                dark:hover:border-violet-500/20
-                dark:hover:bg-violet-500/10
+                hover:border-violet-soft
+                hover:bg-violet-soft/10
               "
             >
               <Icon
                 size={18}
-                className="text-violet-600"
+                className="text-violet"
               />
 
               <span className="text-xs font-medium">

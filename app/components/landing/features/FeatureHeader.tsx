@@ -29,7 +29,7 @@ export default function FeatureHeader() {
     >
       {/* Badge */}
 
-      <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200/50 bg-indigo-50/50 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 backdrop-blur-sm">
+      <div className="inline-flex items-center gap-2 rounded-full border border-hairline bg-canvas-soft px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 backdrop-blur-sm">
         <Sparkles size={14} strokeWidth={2} />
         Features
       </div>
@@ -40,7 +40,7 @@ export default function FeatureHeader() {
         Everything you need
         <br />
 
-        <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent">
           to land your next interview.
         </span>
       </h2>
@@ -65,7 +65,7 @@ export default function FeatureHeader() {
           duration: 0.8,
           delay: 0.3,
         }}
-        className="mx-auto mt-12 h-1 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+        className="mx-auto mt-12 h-1 rounded-full bg-gradient-to-r from-violet to-highlight-pink"
       />
     </motion.div>
   );

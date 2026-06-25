@@ -49,19 +49,16 @@ export default function FeatureCard({
       group
       relative
       overflow-hidden
-      rounded-2xl
+      rounded-md
       border
-      border-zinc-200/50
-      bg-white/60
+      border-hairline
+      bg-canvas
       backdrop-blur-sm
-      shadow-sm
+      shadow-level-2
       transition-all
       duration-300
-      hover:shadow-lg
-      hover:border-zinc-200/80
-      dark:border-zinc-800/50
-      dark:bg-zinc-900/40
-      dark:hover:border-zinc-700/80
+      hover:shadow-level-3
+      hover:border-hairline-strong
       ${className}
       `}
     >
@@ -74,7 +71,7 @@ export default function FeatureCard({
         h-64
         w-64
         rounded-full
-        bg-indigo-500/5
+        bg-violet/5
         blur-2xl
       "
         animate={{
@@ -95,7 +92,7 @@ export default function FeatureCard({
 
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-4 flex-1">
-            <div className="flex-shrink-0 h-11 w-11 rounded-xl bg-indigo-100 p-2 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400 flex items-center justify-center">
+            <div className="flex-shrink-0 h-10 w-10 rounded-sm bg-violet-soft/30 p-2 text-violet dark:bg-violet/10 dark:text-violet-soft flex items-center justify-center">
               {icon}
             </div>
 

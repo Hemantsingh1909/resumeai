@@ -130,7 +130,6 @@ for (const width of viewports) {
     
     await page.locator("#hero").screenshot({ path: path.join(screenshotsDir, "hero.png") });
     await page.locator("#features").screenshot({ path: path.join(screenshotsDir, "features.png") });
-    await page.locator("#pricing").screenshot({ path: path.join(screenshotsDir, "pricing.png") });
     await page.locator("#faq").screenshot({ path: path.join(screenshotsDir, "faq.png") });
     await page.locator("footer").screenshot({ path: path.join(screenshotsDir, "footer.png") });
   });

@@ -17,10 +17,6 @@ const navItems = [
     href: "#features",
   },
   {
-    title: "Pricing",
-    href: "#pricing",
-  },
-  {
     title: "FAQ",
     href: "#faq",
   },

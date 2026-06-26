@@ -5,7 +5,6 @@ import Hero from "./components/landing/hero/Hero";
 import StatsBar from "./components/landing/StatsBar";
 import Features from "./components/landing/features/Features";
 import HowItWorks from "./components/landing/HowItWorks";
-import Pricing from "./components/landing/pricing/Pricing";
 import CTA from "./components/landing/CTA";
 import FAQ from "./components/landing/faq/FAQ";
 import Footer from "./components/landing/footer/Footer";
@@ -20,7 +19,6 @@ export default function Home() {
       <Integrations />
       <HowItWorks />
       <Features />
-      <Pricing />
       <FAQ />
       <CTA />
       <Footer />

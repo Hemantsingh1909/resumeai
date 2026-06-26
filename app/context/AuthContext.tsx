@@ -14,6 +14,7 @@ export interface SavedResume {
   tailoredText: string;
   score: number;
   createdAt: string;
+  optimizedDataString?: string;
 }
 
 interface AuthContextType {
@@ -23,7 +24,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => void;
-  saveResume: (jobTitle: string, originalText: string, tailoredText: string, score: number) => Promise<SavedResume>;
+  saveResume: (jobTitle: string, originalText: string, tailoredText: string, score: number, optimizedDataString?: string) => Promise<SavedResume>;
   deleteResume: (id: string) => void;
 }
 
@@ -146,7 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     jobTitle: string,
     originalText: string,
     tailoredText: string,
-    score: number
+    score: number,
+    optimizedDataString?: string
   ): Promise<SavedResume> => {
     if (!user) {
       throw new Error("Must be logged in to save resumes.");
@@ -158,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       originalText,
       tailoredText,
       score,
+      optimizedDataString,
       createdAt: new Date().toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",

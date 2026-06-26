@@ -119,7 +119,6 @@ test("Audit landing page for errors, overflow, and capture screenshots", async (
   
   await page.locator("#hero").screenshot({ path: `${screenshotsDir}/hero.png` });
   await page.locator("#features").screenshot({ path: `${screenshotsDir}/features.png` });
-  await page.locator("#pricing").screenshot({ path: `${screenshotsDir}/pricing.png` });
   await page.locator("#faq").screenshot({ path: `${screenshotsDir}/faq.png` });
   await page.locator("footer").screenshot({ path: `${screenshotsDir}/footer.png` });
 });

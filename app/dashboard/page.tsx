@@ -24,6 +24,7 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Key,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -32,6 +33,16 @@ interface BulletDiff {
   original: string;
   tailored: string;
   improvements: string[];
+}
+
+interface OptimizedData {
+  originalResumeText?: string;
+  tailoredResumeText: string;
+  originalAtsScore: number;
+  optimizedAtsScore: number;
+  matchedKeywords: string[];
+  insertedKeywords: string[];
+  bulletDiffs: BulletDiff[];
 }
 
 // Sample Data
@@ -121,7 +132,10 @@ function DashboardContent() {
     signOut,
     saveResume,
     deleteResume,
+    loading,
   } = useAuth();
+
+
   
   // App states: 1 = Upload, 2 = Job Description, 3 = Analysis, 4 = Results
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -130,9 +144,14 @@ function DashboardContent() {
   const [jobDescription, setJobDescription] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
+  const [optimizedData, setOptimizedData] = useState<OptimizedData | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFileBase64, setUploadedFileBase64] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
   
   // Auth state
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [authType, setAuthType] = useState<"signup" | "signin">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -153,28 +172,27 @@ function DashboardContent() {
     const authParam = searchParams.get("auth");
     if (authParam === "signin") {
       setAuthType("signin");
-      setShowAuthModal(true);
     } else if (authParam === "signup") {
       setAuthType("signup");
-      setShowAuthModal(true);
     }
   }, [searchParams]);
 
   // Auto-save resume if user is logged in and results are generated
   useEffect(() => {
-    if (step === 4 && user && !hasSavedThisRun) {
+    if (step === 4 && user && !hasSavedThisRun && optimizedData) {
       saveResume(
         jobDescription.split("\n")[0] || "Senior Frontend Engineer",
         resumeText || sampleResumeContent,
-        getTailoredResumeText(),
-        95
+        optimizedData.tailoredResumeText,
+        optimizedData.optimizedAtsScore,
+        JSON.stringify(optimizedData)
       )
         .then(() => {
           setHasSavedThisRun(true);
         })
         .catch((err) => console.error("Error auto-saving resume:", err));
     }
-  }, [step, user, hasSavedThisRun]);
+  }, [step, user, hasSavedThisRun, optimizedData]);
 
   // Handle fake file drag & drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -186,123 +204,206 @@ function DashboardContent() {
     setIsDragging(false);
   };
 
+  const processFile = async (file: File) => {
+    setIsParsing(true);
+    setApiError(null);
+    setSelectedFile({
+      name: file.name,
+      size: `${Math.round(file.size / 1024)} KB`,
+      uploadedAt: "Just now",
+    });
+    setUploadedFile(file);
+
+    try {
+      if (file.name.toLowerCase().endsWith(".txt")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          setResumeText(text);
+          setUploadedFileBase64(null);
+          setIsParsing(false);
+        };
+        reader.onerror = () => {
+          setApiError("Failed to read text file.");
+          setIsParsing(false);
+        };
+        reader.readAsText(file);
+      } else if (file.name.toLowerCase().endsWith(".pdf")) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(",")[1];
+          setUploadedFileBase64(base64);
+          setResumeText(`[PDF Document: ${file.name}]`);
+          setIsParsing(false);
+        };
+        reader.onerror = () => {
+          setApiError("Failed to read PDF file.");
+          setIsParsing(false);
+        };
+        reader.readAsDataURL(file);
+      } else if (file.name.toLowerCase().endsWith(".docx")) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const mammoth = await import("mammoth");
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            setResumeText(result.value);
+            setUploadedFileBase64(null);
+          } catch (err: any) {
+            console.error("Docx parsing error:", err);
+            setApiError("Failed to parse DOCX file content.");
+          } finally {
+            setIsParsing(false);
+          }
+        };
+        reader.onerror = () => {
+          setApiError("Failed to read DOCX file.");
+          setIsParsing(false);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        setApiError("Unsupported file format. Please upload PDF, DOCX, or TXT.");
+        setIsParsing(false);
+      }
+    } catch (err: any) {
+      console.error("File processing error:", err);
+      setApiError("An error occurred while processing the file.");
+      setIsParsing(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      setSelectedFile({
-        name: file.name,
-        size: `${Math.round(file.size / 1024)} KB`,
-        uploadedAt: "Just now",
-      });
-      setResumeText(sampleResumeContent);
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile({
-        name: file.name,
-        size: `${Math.round(file.size / 1024)} KB`,
-        uploadedAt: "Just now",
-      });
-      setResumeText(sampleResumeContent);
+      processFile(e.target.files[0]);
     }
   };
 
   const useSampleData = () => {
     setSelectedFile(sampleResumeFile);
     setResumeText(sampleResumeContent);
+    setUploadedFile(null);
+    setUploadedFileBase64(null);
   };
 
-  // Run analysis animation
+  // Run analysis trigger
   const startAnalysis = () => {
     if (!jobDescription.trim()) return;
+    runGeminiOptimization();
+  };
+
+  const runGeminiOptimization = async () => {
+    setApiError(null);
     setStep(3);
     setAnalysisProgress(0);
     setCurrentAnalysisStep(0);
     setHasSavedThisRun(false);
-  };
 
-  useEffect(() => {
-    if (step !== 3) return;
-
-    const totalDuration = 4000; // 4 seconds total
-    const intervalTime = 40; // 40ms interval
-    const totalSteps = totalDuration / intervalTime;
-    let currentStepCount = 0;
-
+    // Start progress animation up to 90%
+    let currentProgress = 0;
     const progressInterval = setInterval(() => {
-      currentStepCount += 1;
-      const nextProgress = Math.min(Math.round((currentStepCount / totalSteps) * 100), 100);
-      setAnalysisProgress(nextProgress);
-
-      // Determine which text step to show
-      const stepIndex = Math.min(
-        Math.floor((nextProgress / 100) * analysisSteps.length),
-        analysisSteps.length - 1
-      );
-      setCurrentAnalysisStep(stepIndex);
-
-      if (nextProgress >= 100) {
+      currentProgress += 2;
+      if (currentProgress <= 90) {
+        setAnalysisProgress(currentProgress);
+        
+        // Progress steps logic
+        const stepIndex = Math.min(
+          Math.floor((currentProgress / 105) * analysisSteps.length),
+          analysisSteps.length - 1
+        );
+        setCurrentAnalysisStep(stepIndex);
+      } else {
         clearInterval(progressInterval);
-        setTimeout(() => {
-          setStep(4); // Move to Results
-        }, 500);
       }
-    }, intervalTime);
+    }, 45);
 
-    return () => clearInterval(progressInterval);
-  }, [step]);
+    try {
+      const response = await fetch(
+        "/api/optimize",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resumeText,
+            jobDescription,
+            uploadedFileBase64
+          })
+        }
+      );
 
-  // Construct optimized resume text
-  const getTailoredResumeText = () => {
-    return `ALEX RIVERA
-alex.rivera@dev.io | +1 (555) 019-2834 | San Francisco, CA
+      clearInterval(progressInterval);
 
-PROFESSIONAL SUMMARY
-Senior-track Frontend Engineer with 3+ years of experience building high-performance web applications using React, Next.js, and TypeScript. Expert in Core Web Vitals optimization and fluid responsive architectures using Tailwind CSS.
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP error ${response.status}`);
+      }
 
-WORK EXPERIENCE
-Senior Frontend Developer | TechCorp (2024 - Present)
-- ${resumeDiffs[0].tailored}
-- ${resumeDiffs[1].tailored}
-- ${resumeDiffs[2].tailored}
-- ${resumeDiffs[3].tailored}
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      
+      // Clean and parse JSON
+      let cleanedText = rawText.trim();
+      if (cleanedText.startsWith("```")) {
+        cleanedText = cleanedText.replace(/^```(json)?/, "");
+        cleanedText = cleanedText.replace(/```$/, "");
+      }
+      cleanedText = cleanedText.trim();
 
-Software Engineer Intern | CodeLabs (2023)
-- Wrote highly structured, modular JavaScript and React code for marketing and onboarding interfaces.
-- Identified and resolved 15+ complex responsive CSS/layout styling issues across tablet and mobile viewports.`;
+      const parsedData = JSON.parse(cleanedText) as OptimizedData;
+      setOptimizedData(parsedData);
+      
+      // Update original resume text if returned by Gemini (extremely useful for PDF extractions)
+      if (parsedData.originalResumeText) {
+        setResumeText(parsedData.originalResumeText);
+      }
+      
+      // Set to 100% and transition
+      setAnalysisProgress(100);
+      setCurrentAnalysisStep(analysisSteps.length - 1);
+      setTimeout(() => {
+        setStep(4);
+      }, 500);
+
+    } catch (err: any) {
+      clearInterval(progressInterval);
+      console.error("Gemini optimization error:", err);
+      setApiError(err.message || "An unexpected error occurred during optimization.");
+      setStep(2); // Go back to Job Description
+    }
   };
 
   // Handle dynamic download of the tailored resume
   const handleDownload = () => {
-    const tailoredResume = getTailoredResumeText();
+    if (!optimizedData) return;
+
+    const fileName = selectedFile 
+      ? `${selectedFile.name.replace(/\.[^/.]+$/, "")}_Optimized.txt`
+      : "ATSPrime_Optimized_Resume.txt";
 
     // Trigger standard browser file download
-    const blob = new Blob([tailoredResume], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([optimizedData.tailoredResumeText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "Alex_Rivera_Optimized_Resume.txt";
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
     setDownloadSuccess(true);
-    
-    // Prompt lead capture registration modal for anonymous users
-    if (!user) {
-      setTimeout(() => {
-        setAuthError("");
-        setAuthType("signup");
-        setShowAuthModal(true);
-      }, 800);
-    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -318,20 +419,20 @@ Software Engineer Intern | CodeLabs (2023)
 
       if (res.success) {
         // If they register/login while having results active, immediately save it to their new profile!
-        if (step === 4 && !hasSavedThisRun) {
+        if (step === 4 && !hasSavedThisRun && optimizedData) {
           try {
             await saveResume(
               jobDescription.split("\n")[0] || "Senior Frontend Engineer",
               resumeText || sampleResumeContent,
-              getTailoredResumeText(),
-              95
+              optimizedData.tailoredResumeText,
+              optimizedData.optimizedAtsScore,
+              JSON.stringify(optimizedData)
             );
             setHasSavedThisRun(true);
           } catch (saveErr) {
             console.error("Failed to save resume on login", saveErr);
           }
         }
-        setShowAuthModal(false);
         setEmail("");
         setPassword("");
       } else {
@@ -352,6 +453,154 @@ Software Engineer Intern | CodeLabs (2023)
     setDownloadSuccess(false);
     setHasSavedThisRun(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-canvas-soft flex items-center justify-center text-ink">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-canvas-soft text-ink flex flex-col font-sans select-none relative">
+        {/* Mesh background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-full max-w-7xl h-[400px] bg-gradient-to-b from-violet/5 via-highlight-pink/0 to-transparent blur-[120px]" />
+        
+        {/* Sticky top navigation for guests */}
+        <header className="sticky top-0 z-45 bg-canvas/80 backdrop-blur-md border-b border-hairline">
+          <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+            <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group">
+              <svg viewBox="0 0 24 24" className="h-6 w-6 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
+                <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+              </svg>
+              <span className="text-base font-bold tracking-tight text-white">
+                ATSPrime
+              </span>
+            </Link>
+            
+            <Link href="/">
+              <button className="px-4 py-2 text-xs font-semibold border border-hairline rounded-sm hover:bg-canvas-soft transition-colors cursor-pointer text-zinc-300">
+                Back to Home
+              </button>
+            </Link>
+          </div>
+        </header>
+
+        {/* Centered Auth Card */}
+        <main className="flex-1 flex items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.4 }}
+            className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-8 shadow-level-5 text-left"
+          >
+            <div className="text-center mb-6">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-violet/10 border border-violet/20 text-violet mb-4">
+                <Lock size={18} />
+              </div>
+              
+              <h2 className="text-xl font-semibold text-white">
+                {authType === "signup" ? "Get Started with ATSPrime" : "Sign In to ATSPrime"}
+              </h2>
+              
+              <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
+                {authType === "signup"
+                  ? "Create a free account to customize and optimize your resume for your target jobs."
+                  : "Welcome back! Enter your credentials to access your dashboard workspace."}
+              </p>
+            </div>
+
+            {authError && (
+              <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                {authError}
+              </div>
+            )}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              
+              <div className="space-y-1.5">
+                <label htmlFor="email-input-main" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
+                  <input
+                    id="email-input-main"
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="password-input-main" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
+                  <input
+                    id="password-input-main"
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={authSubmitting}
+                className="w-full h-10 bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-on-primary font-semibold text-xs rounded-sm transition-colors shadow-sm cursor-pointer mt-2 flex items-center justify-center gap-2"
+              >
+                {authSubmitting ? (
+                  <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                ) : authType === "signup" ? (
+                  "Create Free Account"
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+
+            {/* Bottom toggle link */}
+            <div className="text-center mt-6 pt-4 border-t border-hairline">
+              <button
+                onClick={() => {
+                  setAuthError("");
+                  setAuthType((prev) => (prev === "signup" ? "signin" : "signup"));
+                }}
+                className="text-xs font-semibold text-violet hover:text-violet-soft transition-colors cursor-pointer animate-none"
+              >
+                {authType === "signup"
+                  ? "Already have an account? Sign In"
+                  : "New to ATSPrime? Create an account"}
+              </button>
+            </div>
+          </motion.div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-hairline bg-canvas py-8 px-6 text-center text-xs text-zinc-600 dark:text-zinc-500">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 ATSPrime Sandbox. All rights reserved.</p>
+            <div className="flex items-center gap-6">
+              <Link href="/" className="hover:text-zinc-300">Home</Link>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-canvas-soft text-ink flex flex-col font-sans select-none relative">
@@ -394,6 +643,8 @@ Software Engineer Intern | CodeLabs (2023)
           </div>
 
           <div className="flex items-center gap-3">
+
+
             {user ? (
               <div className="relative">
                 <button
@@ -444,18 +695,7 @@ Software Engineer Intern | CodeLabs (2023)
                   )}
                 </AnimatePresence>
               </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setAuthError("");
-                  setAuthType("signin");
-                  setShowAuthModal(true);
-                }}
-                className="px-4 py-1.5 text-xs font-semibold border border-hairline rounded-sm hover:bg-canvas-soft transition-colors cursor-pointer text-zinc-300"
-              >
-                Sign In
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
@@ -582,10 +822,11 @@ Software Engineer Intern | CodeLabs (2023)
                 >
                   <button
                     onClick={() => setStep(2)}
-                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary hover:bg-zinc-100 px-6 py-2.5 text-sm font-semibold text-on-primary transition-all duration-200 cursor-pointer shadow-md"
+                    disabled={isParsing}
+                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary hover:bg-zinc-100 px-6 py-2.5 text-sm font-semibold text-on-primary transition-all duration-200 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Continue to Job Description
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                    {isParsing ? "Parsing Resume..." : "Continue to Job Description"}
+                    {!isParsing && <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />}
                   </button>
                 </motion.div>
               )}
@@ -622,6 +863,16 @@ Software Engineer Intern | CodeLabs (2023)
                             onClick={() => {
                               setResumeText(res.originalText);
                               setJobDescription(res.jobTitle);
+                              if (res.optimizedDataString) {
+                                try {
+                                  setOptimizedData(JSON.parse(res.optimizedDataString));
+                                } catch (e) {
+                                  console.error("Error parsing saved optimized data:", e);
+                                  setOptimizedData(null);
+                                }
+                              } else {
+                                setOptimizedData(null);
+                              }
                               setStep(4);
                               setHasSavedThisRun(true);
                               setDownloadSuccess(false);
@@ -670,6 +921,14 @@ Software Engineer Intern | CodeLabs (2023)
               </div>
 
               <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4">
+                {apiError && (
+                  <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
+                    <span>{apiError}</span>
+                    <button onClick={() => setApiError(null)} className="text-zinc-500 hover:text-zinc-300 font-semibold ml-2 cursor-pointer">
+                      ✕
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-zinc-300 font-semibold text-sm">
                     <Briefcase size={16} className="text-violet" />
@@ -848,8 +1107,10 @@ Software Engineer Intern | CodeLabs (2023)
 
                     <div className="flex items-center justify-center gap-6 mt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-zinc-500 line-through">72</div>
-                        <div className="text-[10px] text-zinc-600 font-mono mt-1">ORIGINAL</div>
+                        <div className="text-2xl font-bold text-zinc-500 line-through">
+                          {optimizedData?.originalAtsScore ?? 72}
+                        </div>
+                        <div className="text-[10px] text-zinc-650 font-mono mt-1">ORIGINAL</div>
                       </div>
                       
                       <div className="h-8 w-px bg-zinc-800" />
@@ -860,7 +1121,7 @@ Software Engineer Intern | CodeLabs (2023)
                           animate={{ scale: 1.1 }}
                           className="text-5xl font-bold text-white bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent"
                         >
-                          95
+                          {optimizedData?.optimizedAtsScore ?? 95}
                         </motion.div>
                         <div className="text-[10px] text-violet font-semibold font-mono mt-1 animate-pulse">OPTIMIZED</div>
                       </div>
@@ -868,7 +1129,9 @@ Software Engineer Intern | CodeLabs (2023)
 
                     <div className="mt-6 text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-lg flex items-center justify-center gap-2">
                       <TrendingUp size={14} />
-                      <span className="font-semibold">+23 Improvement Score points</span>
+                      <span className="font-semibold">
+                        +{(optimizedData?.optimizedAtsScore ?? 95) - (optimizedData?.originalAtsScore ?? 72)} Improvement Score points
+                      </span>
                     </div>
                   </div>
 
@@ -881,9 +1144,11 @@ Software Engineer Intern | CodeLabs (2023)
                     <div className="space-y-4 text-left">
                       {/* Keyword list */}
                       <div>
-                        <span className="text-[11px] font-bold text-zinc-400 block mb-2">Matched Job Requirements (15)</span>
+                        <span className="text-[11px] font-bold text-zinc-400 block mb-2">
+                          Matched Job Requirements ({optimizedData?.matchedKeywords?.length ?? 15})
+                        </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {["React", "TypeScript", "Tailwind CSS", "API integrations", "Responsive layouts", "Web optimization", "Visual polish"].map((kw) => (
+                          {(optimizedData?.matchedKeywords ?? ["React", "TypeScript", "Tailwind CSS", "API integrations", "Responsive layouts", "Web optimization", "Visual polish"]).map((kw) => (
                             <span key={kw} className="text-[10px] bg-zinc-900 border border-hairline text-zinc-300 px-2 py-0.5 rounded">
                               {kw}
                             </span>
@@ -893,9 +1158,11 @@ Software Engineer Intern | CodeLabs (2023)
 
                       {/* Missing Keywords optimized */}
                       <div>
-                        <span className="text-[11px] font-bold text-violet block mb-2">Optimized Keywords Inserted (5)</span>
+                        <span className="text-[11px] font-bold text-violet block mb-2">
+                          Optimized Keywords Inserted ({optimizedData?.insertedKeywords?.length ?? 5})
+                        </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {["Next.js", "Core Web Vitals", "GraphQL", "Bundle-splitting", "a11y / accessibility"].map((kw) => (
+                          {(optimizedData?.insertedKeywords ?? ["Next.js", "Core Web Vitals", "GraphQL", "Bundle-splitting", "a11y / accessibility"]).map((kw) => (
                             <span key={kw} className="text-[10px] bg-violet/10 border border-violet/20 text-violet-400 px-2 py-0.5 rounded font-semibold">
                               + {kw}
                             </span>
@@ -937,7 +1204,7 @@ Software Engineer Intern | CodeLabs (2023)
                         <span className="text-sm font-semibold text-white">AI-Rewritten Bullet Points</span>
                       </div>
                       <span className="text-xs text-zinc-500 font-mono">
-                        Comparing {diffIndex + 1} of {resumeDiffs.length}
+                        Comparing {diffIndex + 1} of {optimizedData?.bulletDiffs?.length ?? resumeDiffs.length}
                       </span>
                     </div>
 
@@ -952,7 +1219,7 @@ Software Engineer Intern | CodeLabs (2023)
                             Original Bullet Point
                           </span>
                           <div className="p-4 rounded bg-zinc-950/50 border border-red-500/10 text-xs text-zinc-400 line-through leading-relaxed">
-                            {resumeDiffs[diffIndex].original}
+                            {optimizedData?.bulletDiffs?.[diffIndex]?.original ?? resumeDiffs[diffIndex]?.original}
                           </div>
                         </div>
 
@@ -962,7 +1229,7 @@ Software Engineer Intern | CodeLabs (2023)
                             AI-Tailored Enhancement
                           </span>
                           <div className="p-4 rounded bg-emerald-500/[0.02] border border-emerald-500/20 text-xs text-white font-medium leading-relaxed">
-                            {resumeDiffs[diffIndex].tailored}
+                            {optimizedData?.bulletDiffs?.[diffIndex]?.tailored ?? resumeDiffs[diffIndex]?.tailored}
                           </div>
                         </div>
 
@@ -975,7 +1242,7 @@ Software Engineer Intern | CodeLabs (2023)
                         </span>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {resumeDiffs[diffIndex].improvements.map((improvement, index) => (
+                          {(optimizedData?.bulletDiffs?.[diffIndex]?.improvements ?? resumeDiffs[diffIndex]?.improvements).map((improvement, index) => (
                             <div key={index} className="flex items-center gap-2 text-xs text-zinc-300 bg-zinc-900/60 p-2.5 rounded border border-hairline">
                               <span className="h-1.5 w-1.5 rounded-full bg-violet" />
                               <span>{improvement}</span>
@@ -998,7 +1265,7 @@ Software Engineer Intern | CodeLabs (2023)
 
                       {/* Step Indicator dots */}
                       <div className="flex gap-1.5">
-                        {resumeDiffs.map((_, idx) => (
+                        {(optimizedData?.bulletDiffs ?? resumeDiffs).map((_, idx) => (
                           <button
                             key={idx}
                             onClick={() => setDiffIndex(idx)}
@@ -1010,8 +1277,8 @@ Software Engineer Intern | CodeLabs (2023)
                       </div>
 
                       <button
-                        onClick={() => setDiffIndex(prev => Math.min(prev + 1, resumeDiffs.length - 1))}
-                        disabled={diffIndex === resumeDiffs.length - 1}
+                        onClick={() => setDiffIndex(prev => Math.min(prev + 1, (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1))}
+                        disabled={diffIndex === (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1}
                         className="px-3.5 py-1.5 text-xs font-semibold border border-hairline rounded hover:bg-zinc-900 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-zinc-300"
                       >
                         Next Bullet
@@ -1028,130 +1295,8 @@ Software Engineer Intern | CodeLabs (2023)
 
         </AnimatePresence>
 
-        {/* AUTH MODAL DIALOG */}
-        <AnimatePresence>
-          {showAuthModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              {/* Scrim overlay */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowAuthModal(false)}
-                className="absolute inset-0 bg-black backdrop-blur-sm"
-              />
 
-              {/* Modal content */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ type: "spring", duration: 0.4 }}
-                className="relative z-10 w-full max-w-sm rounded-lg border border-hairline bg-canvas p-8 shadow-level-5 m-6 text-left animate-none"
-              >
-                {/* Close button */}
-                <button
-                  onClick={() => setShowAuthModal(false)}
-                  className="absolute right-4 top-4 text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 rounded-full hover:bg-zinc-900 cursor-pointer"
-                  aria-label="Close modal"
-                >
-                  <X size={15} />
-                </button>
 
-                <div className="text-center mb-6">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-violet/10 border border-violet/20 text-violet mb-4">
-                    <Lock size={18} />
-                  </div>
-                  
-                  <h2 className="text-xl font-semibold text-white">
-                    {authType === "signup" ? "Save your optimized resume" : "Sign In to ATSPrime"}
-                  </h2>
-                  
-                  <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
-                    {authType === "signup"
-                      ? "We've generated and downloaded your optimized resume. Create a free account to save your dashboard progress permanently."
-                      : "Access your saved resumes and continue optimization."}
-                  </p>
-                </div>
-
-                {authError && (
-                  <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                    {authError}
-                  </div>
-                )}
-
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                  
-                  <div className="space-y-1.5">
-                    <label htmlFor="email-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
-                      <input
-                        id="email-input"
-                        type="email"
-                        required
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="password-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
-                      <input
-                        id="password-input"
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={authSubmitting}
-                    className="w-full h-10 bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-on-primary font-semibold text-xs rounded-sm transition-colors shadow-sm cursor-pointer mt-2 flex items-center justify-center gap-2"
-                  >
-                    {authSubmitting ? (
-                      <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                    ) : authType === "signup" ? (
-                      "Create Free Account"
-                    ) : (
-                      "Sign In"
-                    )}
-                  </button>
-                </form>
-
-                {/* Bottom toggle link */}
-                <div className="text-center mt-6 pt-4 border-t border-hairline">
-                  <button
-                    onClick={() => {
-                      setAuthError("");
-                      setAuthType((prev) => (prev === "signup" ? "signin" : "signup"));
-                    }}
-                    className="text-xs font-semibold text-violet hover:text-violet-soft transition-colors cursor-pointer"
-                  >
-                    {authType === "signup"
-                      ? "Already have an account? Sign In"
-                      : "New to ATSPrime? Create an account"}
-                  </button>
-                </div>
-
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </main>
 
       {/* Footer */}
@@ -1160,10 +1305,6 @@ Software Engineer Intern | CodeLabs (2023)
           <p>© 2026 ATSPrime Sandbox. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-zinc-300">Home</Link>
-            <span className="h-3 w-px bg-zinc-800" />
-            <button onClick={() => { setAuthError(""); setAuthType("signup"); setShowAuthModal(true); }} className="hover:text-zinc-300">
-              Create Account
-            </button>
           </div>
         </div>
       </footer>

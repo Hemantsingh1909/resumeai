@@ -38,7 +38,6 @@ const socialLinks = [
 const footerLinks = {
   product: [
     { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
     { label: "Roadmap", href: "#" },
   ],
@@ -225,7 +224,7 @@ export default function Footer() {
           <p className="text-center md:text-right">
             🚀 Building in Public &bull; Follow our journey →{" "}
             <Link
-              href="https://github.com/Hemantsingh1909/atsprime"
+              href="https://github.com/Hemantsingh1909/resumeai"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:opacity-85 font-medium transition-opacity"

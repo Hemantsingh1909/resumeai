@@ -70,7 +70,6 @@ export default function FeatureGrid() {
         title="Resume Versions"
         description="Keep a tailored resume for every company you apply to."
         icon={<FolderKanban size={22} />}
-        className="xl:col-span-3"
       >
         <VersionPreview />
       </FeatureCard>

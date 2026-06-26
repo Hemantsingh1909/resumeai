@@ -7,12 +7,12 @@ import { Menu, X, Sparkles } from "lucide-react";
 
 const navItems = [
   {
-    title: "Features",
-    href: "#features",
-  },
-  {
     title: "How it Works",
     href: "#how-it-works",
+  },
+  {
+    title: "Features",
+    href: "#features",
   },
   {
     title: "Pricing",
@@ -82,21 +82,25 @@ export default function Navbar() {
 
             <div className="hidden items-center gap-4 md:flex">
 
-              <button className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50">
-                Sign In
-              </button>
+              <Link href="/dashboard?auth=signin">
+                <button className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 cursor-pointer">
+                  Sign In
+                </button>
+              </Link>
 
-              <motion.button
-                whileHover={{
-                  scale: 1.02,
-                }}
-                whileTap={{
-                  scale: 0.98,
-                }}
-                className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm"
-              >
-                Start Free
-              </motion.button>
+              <Link href="/dashboard">
+                <motion.button
+                  whileHover={{
+                    scale: 1.02,
+                  }}
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer"
+                >
+                  Start Free
+                </motion.button>
+              </Link>
             </div>
 
             {/* Mobile */}
@@ -147,14 +151,17 @@ export default function Navbar() {
               ))}
 
               <div className="border-t border-hairline pt-4 space-y-3">
-                <button className="w-full px-4 py-2.5 rounded-lg border border-hairline text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors">
-                  Sign In
-                </button>
+                <Link href="/dashboard?auth=signin" onClick={() => setMobileOpen(false)} className="block">
+                  <button className="w-full px-4 py-2.5 rounded-lg border border-hairline text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
+                    Sign In
+                  </button>
+                </Link>
 
-                <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors">
-                  Start Free
-                </button>
-
+                <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
+                  <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
+                    Start Free
+                  </button>
+                </Link>
 
               </div>
             </div>

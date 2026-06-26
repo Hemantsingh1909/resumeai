@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 interface PricingCardProps {
   title: string;
@@ -133,27 +134,28 @@ export default function PricingCard({
         ))}
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`
-          mt-10
-          w-full
-          rounded-full
-          py-2.5
-          font-medium
-          transition-all
-          duration-200
-          cursor-pointer
-          ${
-            popular
-              ? "bg-zinc-950 text-white hover:bg-zinc-900 shadow-sm"
-              : "bg-primary text-on-primary hover:opacity-95 shadow-sm"
-          }
-        `}
-      >
-        {button}
-      </motion.button>
+      <Link href="/dashboard" className="block mt-10">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={`
+            w-full
+            rounded-full
+            py-2.5
+            font-medium
+            transition-all
+            duration-200
+            cursor-pointer
+            ${
+              popular
+                ? "bg-zinc-950 text-white hover:bg-zinc-900 shadow-sm"
+                : "bg-primary text-on-primary hover:opacity-95 shadow-sm"
+            }
+          `}
+        >
+          {button}
+        </motion.button>
+      </Link>
     </motion.div>
   );
 }

@@ -12,50 +12,39 @@ export async function POST(request: Request) {
       );
     }
 
-    let parts: any[] = [];
-
+    // 1. Extract PDF text if a PDF file is provided
+    let activeResumeText = resumeText;
     if (uploadedFileBase64) {
-      parts.push({
-        inlineData: {
-          mimeType: "application/pdf",
-          data: uploadedFileBase64
-        }
-      });
-      
-      parts.push({
-        text: `Analyze the attached Resume PDF document and the provided Job Description, and output a tailored, optimized resume, the extracted original plain text, and bullet point analysis in valid JSON format.
-
-Job Description:
-"""
-${jobDescription}
-"""
-
-Your response must be a single, valid JSON object matching the following structure. Do not output any markdown formatting, code block backticks, or extra commentary. Just the raw JSON content:
-{
-  "tailoredResumeText": "The complete tailored resume text including optimized headers, summaries, work experience (with rewritten bullet points), skills section, and education. Ensure it is formatted cleanly in plain text.",
-  "originalResumeText": "The plain text extracted from the uploaded resume PDF file.",
-  "originalAtsScore": 72,
-  "optimizedAtsScore": 95,
-  "matchedKeywords": ["React", "TypeScript", "Tailwind CSS"],
-  "insertedKeywords": ["Next.js", "Core Web Vitals", "a11y"],
-  "bulletDiffs": [
-    {
-      "original": "The original bullet point from the resume that needed optimization",
-      "tailored": "The optimized and rewritten bullet point",
-      "improvements": ["Improvement explanation 1", "Improvement explanation 2"]
+      try {
+        const pdf = require("pdf-parse");
+        const pdfBuffer = Buffer.from(uploadedFileBase64, "base64");
+        const pdfData = await pdf(pdfBuffer);
+        activeResumeText = pdfData.text;
+      } catch (err: any) {
+        console.error("Error extracting text from PDF resume:", err);
+        return NextResponse.json(
+          { error: { message: `Failed to extract text from PDF resume: ${err.message}` } },
+          { status: 400 }
+        );
+      }
     }
-  ]
-}
 
-Perform actual analysis on the provided inputs to populate these fields. Ensure all JSON strings are properly escaped. Return only valid JSON.`
-      });
-    } else {
-      parts.push({
-        text: `Analyze the provided Resume and Job Description, and output a tailored, optimized resume, the original plain text, and bullet point analysis in valid JSON format.
+    if (!activeResumeText || !activeResumeText.trim()) {
+      return NextResponse.json(
+        { error: { message: "Resume content is empty. Please upload a valid resume." } },
+        { status: 400 }
+      );
+    }
+
+    // 2. Shorten prompt text to save token overhead, leveraging responseSchema for structure
+    const promptText = `Analyze the provided Resume and Job Description.
+Tailor the resume text (summaries, experience bullets, skills) to align with the job description.
+Extract and return the original plain text of the resume.
+Calculate original vs optimized ATS scores, identify matched keywords, AI-optimized keywords inserted, and provide bullet diffs.
 
 Resume Text:
 """
-${resumeText}
+${activeResumeText}
 """
 
 Job Description:
@@ -63,55 +52,103 @@ Job Description:
 ${jobDescription}
 """
 
-Your response must be a single, valid JSON object matching the following structure. Do not output any markdown formatting, code block backticks, or extra commentary. Just the raw JSON content:
-{
-  "tailoredResumeText": "The complete tailored resume text including optimized headers, summaries, work experience (with rewritten bullet points), skills section, and education. Ensure it is formatted cleanly in plain text.",
-  "originalResumeText": "The plain text of the provided resume text.",
-  "originalAtsScore": 72,
-  "optimizedAtsScore": 95,
-  "matchedKeywords": ["React", "TypeScript", "Tailwind CSS"],
-  "insertedKeywords": ["Next.js", "Core Web Vitals", "a11y"],
-  "bulletDiffs": [
-    {
-      "original": "The original bullet point from the resume that needed optimization",
-      "tailored": "The optimized and rewritten bullet point",
-      "improvements": ["Improvement explanation 1", "Improvement explanation 2"]
-    }
-  ]
-}
-
-Perform actual analysis on the provided inputs to populate these fields. Ensure all JSON strings are properly escaped. Return only valid JSON.`
-      });
-    }
+Return the analysis response as a single JSON object matching the provided responseSchema.`;
 
     const systemInstructionText = `You are the AI engine behind ATSPrime, an AI-powered ATS resume optimization platform. Your task is to analyze resumes against a target job description, improve ATS compatibility, preserve factual accuracy, quantify achievements where possible, optimize keywords naturally, and produce recruiter-friendly, truthful content. Never invent experience or skills. Maintain professional formatting and concise, impactful bullet points.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: parts
-            }
-          ],
-          systemInstruction: {
-            parts: [
-              {
-                text: systemInstructionText
-              }
-            ]
+    // 3 & 4. Use the v1beta endpoint (needed for gemini-2.5-flash schemas) and implement retry logic for HTTP 429
+    const callGemini = async (attempt = 1): Promise<Response> => {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          generationConfig: {
-            responseMimeType: "application/json"
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: promptText }]
+              }
+            ],
+            systemInstruction: {
+              parts: [
+                {
+                  text: systemInstructionText
+                }
+              ]
+            },
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  tailoredResumeText: { type: "STRING" },
+                  originalResumeText: { type: "STRING" },
+                  originalAtsScore: { type: "INTEGER" },
+                  optimizedAtsScore: { type: "INTEGER" },
+                  matchedKeywords: {
+                    type: "ARRAY",
+                    items: { type: "STRING" }
+                  },
+                  insertedKeywords: {
+                    type: "ARRAY",
+                    items: { type: "STRING" }
+                  },
+                  bulletDiffs: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        original: { type: "STRING" },
+                        tailored: { type: "STRING" },
+                        improvements: {
+                          type: "ARRAY",
+                          items: { type: "STRING" }
+                        }
+                      },
+                      required: ["original", "tailored", "improvements"]
+                    }
+                  }
+                },
+                required: [
+                  "tailoredResumeText",
+                  "originalResumeText",
+                  "originalAtsScore",
+                  "optimizedAtsScore",
+                  "matchedKeywords",
+                  "insertedKeywords",
+                  "bulletDiffs"
+                ]
+              }
+            }
+          })
+        }
+      );
+
+      if (res.status === 429 && attempt <= 2) {
+        let waitMs = 5000;
+        const retryAfterHeader = res.headers.get("retry-after");
+        if (retryAfterHeader) {
+          const retryAfterSec = parseInt(retryAfterHeader, 10);
+          if (!isNaN(retryAfterSec)) {
+            waitMs = retryAfterSec * 1000;
+          } else {
+            const retryDate = Date.parse(retryAfterHeader);
+            if (!isNaN(retryDate)) {
+              waitMs = Math.max(0, retryDate - Date.now());
+            }
           }
-        })
+        }
+        console.warn(`Gemini API returned 429. Retrying in ${waitMs}ms (attempt ${attempt})...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        return callGemini(attempt + 1);
       }
-    );
+
+      return res;
+    };
+
+    const response = await callGemini();
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));

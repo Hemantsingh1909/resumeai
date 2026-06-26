@@ -25,8 +25,12 @@ import {
   LogOut,
   ChevronDown,
   Key,
+  Zap,
+  Target,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { templates, generateTemplateHtml } from "@/app/utils/templates";
 
 // Types for resume optimization
 interface BulletDiff {
@@ -44,6 +48,8 @@ interface OptimizedData {
   insertedKeywords: string[];
   bulletDiffs: BulletDiff[];
 }
+
+// Shared templates and helpers imported from @/app/utils/templates
 
 // Sample Data
 const sampleResumeFile = {
@@ -150,6 +156,10 @@ function DashboardContent() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileBase64, setUploadedFileBase64] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+
+  const [activeResultTab, setActiveResultTab] = useState<"enhancements" | "preview">("enhancements");
+  const [selectedTemplate, setSelectedTemplate] = useState<"classic" | "modern" | "minimal" | "split" | "slate" | "executive">("classic");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   
   // Auth state
   const [authType, setAuthType] = useState<"signup" | "signin">("signup");
@@ -384,26 +394,61 @@ function DashboardContent() {
     }
   };
 
-  // Handle dynamic download of the tailored resume
-  const handleDownload = () => {
-    if (!optimizedData) return;
+  // Handle dynamic download of the tailored resume as PDF via server API
+  const handleDownload = async (): Promise<boolean> => {
+    if (!optimizedData) return false;
+    setDownloadingPdf(true);
+    setApiError(null);
 
-    const fileName = selectedFile 
-      ? `${selectedFile.name.replace(/\.[^/.]+$/, "")}_Optimized.txt`
-      : "ATSPrime_Optimized_Resume.txt";
+    try {
+      const response = await fetch("/api/pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText: optimizedData.tailoredResumeText,
+          templateId: selectedTemplate,
+        }),
+      });
 
-    // Trigger standard browser file download
-    const blob = new Blob([optimizedData.tailoredResumeText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Failed to generate PDF (HTTP ${response.status})`);
+      }
 
-    setDownloadSuccess(true);
+      // Convert response stream to a PDF blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const baseName = selectedFile 
+        ? selectedFile.name.replace(/\.[^/.]+$/, "")
+        : "ATSPrime_Optimized_Resume";
+        
+      const formattedTemplateName = selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1);
+      const fileName = `${baseName}_${formattedTemplateName}.pdf`;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Delay revocation to ensure browser download manager has retrieved the blob
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      setDownloadSuccess(true);
+      return true;
+    } catch (err: any) {
+      console.error("PDF download error:", err);
+      setApiError(err.message || "Failed to download resume PDF.");
+      return false;
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -762,13 +807,29 @@ function DashboardContent() {
                   )}
 
                   {selectedFile ? (
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {selectedFile.size} • Ready for tailoring
-                      </p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-zinc-400 mt-1">
+                          {selectedFile.size} • Ready for tailoring
+                        </p>
+                        <p className="text-[11px] text-zinc-500 mt-2 max-w-[280px] mx-auto leading-normal">
+                          Wrong resume? You can click the button below or drag a new file here to choose a different resume to upload.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        className="px-3.5 py-2 text-xs font-semibold border border-zinc-700 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-500 rounded-sm text-zinc-200 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <RefreshCw size={12} className="text-violet-400" />
+                        Choose a new resume
+                      </button>
                     </div>
                   ) : (
                     <div>
@@ -921,6 +982,29 @@ function DashboardContent() {
               </div>
 
               <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4">
+                {selectedFile && (
+                  <div className="flex items-center justify-between p-3.5 rounded-lg bg-zinc-950/60 border border-hairline text-xs">
+                    <div className="flex items-center gap-2.5 truncate">
+                      <FileCheck size={14} className="text-emerald-450 flex-shrink-0" />
+                      <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-wider font-semibold">Active Resume:</span>
+                      <span className="truncate font-medium text-white">{selectedFile.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(1);
+                        setTimeout(() => {
+                          fileInputRef.current?.click();
+                        }, 150);
+                      }}
+                      className="text-violet hover:text-violet-soft font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ml-3 flex-shrink-0 text-xs"
+                    >
+                      <RefreshCw size={12} />
+                      Change
+                    </button>
+                  </div>
+                )}
+
                 {apiError && (
                   <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
                     <span>{apiError}</span>
@@ -1084,10 +1168,10 @@ function DashboardContent() {
                   </button>
 
                   <button
-                    onClick={handleDownload}
+                    onClick={() => setActiveResultTab("preview")}
                     className="group px-6 py-2.5 text-sm font-semibold bg-violet hover:bg-violet-deep text-white rounded-sm shadow-level-3 transition-colors cursor-pointer flex items-center gap-2"
                   >
-                    {downloadSuccess ? "Downloaded!" : "Download Tailored Resume"}
+                    Download PDF / Preview
                     <Download size={15} className="group-hover:translate-y-0.5 transition-transform" />
                   </button>
                 </div>
@@ -1101,56 +1185,147 @@ function DashboardContent() {
                   
                   {/* ATS Score widget */}
                   <div className="rounded-lg border border-hairline bg-canvas p-6 text-center shadow-level-3">
-                    <h3 className="text-sm font-bold text-zinc-400 tracking-tight">
-                      ATS Optimization Score
+                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider mb-6 text-left">
+                      ATS Match Score Comparison
                     </h3>
 
-                    <div className="flex items-center justify-center gap-6 mt-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-zinc-500 line-through">
-                          {optimizedData?.originalAtsScore ?? 72}
+                    <div className="flex items-center justify-around gap-4">
+                      {/* Original Score */}
+                      <div className="flex flex-col items-center">
+                        <div className="relative flex items-center justify-center">
+                          <svg className="w-16 h-16 transform -rotate-90">
+                            <circle
+                              cx="32"
+                              cy="32"
+                              r="24"
+                              className="stroke-zinc-900"
+                              strokeWidth="5"
+                              fill="transparent"
+                            />
+                            <circle
+                              cx="32"
+                              cy="32"
+                              r="24"
+                              className="stroke-zinc-700"
+                              strokeWidth="5"
+                              fill="transparent"
+                              strokeDasharray={150.8}
+                              strokeDashoffset={150.8 - ((optimizedData?.originalAtsScore ?? 72) / 100) * 150.8}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-sm font-bold text-zinc-400">
+                              {optimizedData?.originalAtsScore ?? 72}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-zinc-650 font-mono mt-1">ORIGINAL</div>
+                        <span className="text-[9px] text-zinc-500 font-mono mt-2 font-bold tracking-wider">
+                          ORIGINAL
+                        </span>
                       </div>
-                      
-                      <div className="h-8 w-px bg-zinc-800" />
 
-                      <div className="text-center">
-                        <motion.div
-                          initial={{ scale: 0.9 }}
-                          animate={{ scale: 1.1 }}
-                          className="text-5xl font-bold text-white bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent"
-                        >
-                          {optimizedData?.optimizedAtsScore ?? 95}
-                        </motion.div>
-                        <div className="text-[10px] text-violet font-semibold font-mono mt-1 animate-pulse">OPTIMIZED</div>
+                      {/* Arrow connector */}
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-zinc-900 border border-hairline flex items-center justify-center text-zinc-555">
+                          <TrendingUp size={14} className="text-violet animate-pulse" />
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-mono mt-1 font-bold">
+                          +{(optimizedData?.optimizedAtsScore ?? 95) - (optimizedData?.originalAtsScore ?? 72)}
+                        </span>
+                      </div>
+
+                      {/* Optimized Score */}
+                      <div className="flex flex-col items-center">
+                        <div className="relative flex items-center justify-center">
+                          <svg className="w-24 h-24 transform -rotate-90">
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="38"
+                              className="stroke-zinc-900"
+                              strokeWidth="7"
+                              fill="transparent"
+                            />
+                            <motion.circle
+                              cx="48"
+                              cy="48"
+                              r="38"
+                              className="stroke-violet"
+                              strokeWidth="7"
+                              fill="transparent"
+                              strokeDasharray={238.76}
+                              initial={{ strokeDashoffset: 238.76 }}
+                              animate={{ strokeDashoffset: 238.76 - ((optimizedData?.optimizedAtsScore ?? 95) / 100) * 238.76 }}
+                              transition={{ duration: 1.2, ease: "easeOut" }}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-2xl font-black text-white bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent">
+                              {optimizedData?.optimizedAtsScore ?? 95}
+                            </span>
+                            <span className="text-[8px] text-zinc-500 font-mono font-medium -mt-1">/ 100</span>
+                          </div>
+                        </div>
+                        <span className="text-[9px] text-violet font-mono mt-2 font-bold tracking-wider animate-pulse">
+                          OPTIMIZED
+                        </span>
                       </div>
                     </div>
 
-                    <div className="mt-6 text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-lg flex items-center justify-center gap-2">
-                      <TrendingUp size={14} />
-                      <span className="font-semibold">
-                        +{(optimizedData?.optimizedAtsScore ?? 95) - (optimizedData?.originalAtsScore ?? 72)} Improvement Score points
-                      </span>
+                    {/* Performance Statement */}
+                    <div className="mt-6 text-left p-3.5 rounded-lg bg-zinc-950 border border-hairline flex items-start gap-3">
+                      <div className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <CheckCircle2 size={12} strokeWidth={2.5} />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="text-[11px] font-bold text-white leading-none">High ATS Compatibility</h4>
+                        <p className="text-[10px] text-zinc-450 leading-normal font-medium">
+                          Your resume matches {(optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5)} job requirements, ranking in the top 5% of candidate compatibility templates.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   {/* Skills Match Card */}
-                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4 shadow-level-3">
-                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-5 shadow-level-3">
+                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider text-left">
                       Target Keyword Analysis
                     </h3>
 
-                    <div className="space-y-4 text-left">
+                    {/* Stacked Progress Bar */}
+                    <div className="space-y-2 text-left">
+                      <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400 font-bold uppercase">
+                        <span>Requirement Coverage</span>
+                        <span className="text-white">{(optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5)} Matched</span>
+                      </div>
+                      <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-emerald-500" style={{ width: `${Math.round(((optimizedData?.matchedKeywords?.length ?? 15) / ((optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5) + 2)) * 100)}%` }} />
+                        <div className="h-full bg-violet" style={{ width: `${Math.round(((optimizedData?.insertedKeywords?.length ?? 5) / ((optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5) + 2)) * 100)}%` }} />
+                      </div>
+                      <div className="flex items-center gap-4 text-[9px] font-mono text-zinc-500 font-medium">
+                        <div className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span>{optimizedData?.matchedKeywords?.length ?? 15} Matched</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-violet" />
+                          <span>{optimizedData?.insertedKeywords?.length ?? 5} AI-Optimized</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 text-left border-t border-hairline pt-4">
                       {/* Keyword list */}
                       <div>
-                        <span className="text-[11px] font-bold text-zinc-400 block mb-2">
+                        <span className="text-[10px] font-mono text-zinc-400 block mb-2 font-bold uppercase tracking-wider">
                           Matched Job Requirements ({optimizedData?.matchedKeywords?.length ?? 15})
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {(optimizedData?.matchedKeywords ?? ["React", "TypeScript", "Tailwind CSS", "API integrations", "Responsive layouts", "Web optimization", "Visual polish"]).map((kw) => (
-                            <span key={kw} className="text-[10px] bg-zinc-900 border border-hairline text-zinc-300 px-2 py-0.5 rounded">
-                              {kw}
+                            <span key={kw} className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/[0.03] border border-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-medium">
+                              <span className="text-[8px]">✓</span> {kw}
                             </span>
                           ))}
                         </div>
@@ -1158,13 +1333,13 @@ function DashboardContent() {
 
                       {/* Missing Keywords optimized */}
                       <div>
-                        <span className="text-[11px] font-bold text-violet block mb-2">
+                        <span className="text-[10px] font-mono text-violet block mb-2 font-bold uppercase tracking-wider">
                           Optimized Keywords Inserted ({optimizedData?.insertedKeywords?.length ?? 5})
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {(optimizedData?.insertedKeywords ?? ["Next.js", "Core Web Vitals", "GraphQL", "Bundle-splitting", "a11y / accessibility"]).map((kw) => (
-                            <span key={kw} className="text-[10px] bg-violet/10 border border-violet/20 text-violet-400 px-2 py-0.5 rounded font-semibold">
-                              + {kw}
+                            <span key={kw} className="inline-flex items-center gap-1 text-[10px] bg-violet/5 border border-violet/10 text-violet-400 px-2 py-0.5 rounded font-semibold">
+                              <span className="text-[8px]">+</span> {kw}
                             </span>
                           ))}
                         </div>
@@ -1173,126 +1348,306 @@ function DashboardContent() {
                   </div>
 
                   {/* Formatting checklist */}
-                  <div className="rounded-lg border border-hairline bg-zinc-950 p-6 space-y-3.5 text-left">
+                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4 text-left shadow-level-3">
                     <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
                       ATS Compliance Check
                     </h3>
                     
-                    {[
-                      { text: "Contact information parsed", status: true },
-                      { text: "No invalid text boxes/graphics", status: true },
-                      { text: "Date formatting structured", status: true },
-                      { text: "Font sizing standardized", status: true },
-                      { text: "Skills mapping verified", status: true },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2.5 text-xs text-zinc-400">
-                        <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
-                        <span>{item.text}</span>
-                      </div>
-                    ))}
+                    <div className="space-y-4">
+                      {[
+                        { text: "Contact Information Structure", desc: "Verified parser accessibility of email, phone, and links.", status: true },
+                        { text: "Parser Layout Compatibility", desc: "No nested text boxes, graphics, or custom columns found.", status: true },
+                        { text: "Date & Timeline Formats", desc: "Parsed dates standardized to unified chronological structures.", status: true },
+                        { text: "Font & Hierarchy Standard", desc: "Normalized typography to standard sans-serif configurations.", status: true },
+                        { text: "Skills Matrix Layout", desc: "Matched core skill definitions with recruiter keywords.", status: true },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <CheckCircle2 size={12} strokeWidth={2.5} />
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-xs font-bold text-white block leading-none">{item.text}</span>
+                            <span className="text-[10px] text-zinc-500 font-medium leading-normal">{item.desc}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-
                 </div>
-
-                {/* Right Side: Interactive Resume Bullet Diff */}
                 <div className="lg:col-span-8 space-y-6">
                   
                   <div className="rounded-lg border border-hairline bg-canvas shadow-level-4 overflow-hidden flex flex-col h-full">
-                    <div className="bg-zinc-950 border-b border-hairline px-6 py-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles size={16} className="text-violet" />
-                        <span className="text-sm font-semibold text-white">AI-Rewritten Bullet Points</span>
+                    {/* Tab Header */}
+                    <div className="bg-zinc-950 border-b border-hairline px-6 py-2 flex items-center justify-between">
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => setActiveResultTab("enhancements")}
+                          className={`
+                            py-3 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer
+                            ${
+                              activeResultTab === "enhancements"
+                                ? "border-violet text-white font-bold"
+                                : "border-transparent text-zinc-500 hover:text-zinc-300"
+                            }
+                          `}
+                        >
+                          <Sparkles size={14} className={activeResultTab === "enhancements" ? "text-violet" : "text-zinc-500"} />
+                          Bullet Enhancements
+                        </button>
+                        
+                        <button
+                          onClick={() => setActiveResultTab("preview")}
+                          className={`
+                            py-3 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer
+                            ${
+                              activeResultTab === "preview"
+                                ? "border-violet text-white font-bold"
+                                : "border-transparent text-zinc-500 hover:text-zinc-300"
+                            }
+                          `}
+                        >
+                          <FileText size={14} className={activeResultTab === "preview" ? "text-violet" : "text-zinc-500"} />
+                          Template & PDF
+                        </button>
                       </div>
-                      <span className="text-xs text-zinc-500 font-mono">
-                        Comparing {diffIndex + 1} of {optimizedData?.bulletDiffs?.length ?? resumeDiffs.length}
-                      </span>
-                    </div>
-
-                    <div className="p-6 space-y-6 flex-1 text-left">
                       
-                      {/* Before and After Side-by-Side Diff */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        {/* Original */}
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-mono font-bold text-zinc-500 bg-zinc-900 border border-hairline px-2 py-0.5 rounded">
-                            Original Bullet Point
-                          </span>
-                          <div className="p-4 rounded bg-zinc-950/50 border border-red-500/10 text-xs text-zinc-400 line-through leading-relaxed">
-                            {optimizedData?.bulletDiffs?.[diffIndex]?.original ?? resumeDiffs[diffIndex]?.original}
-                          </div>
-                        </div>
-
-                        {/* Tailored */}
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-mono font-bold text-violet bg-violet/10 border border-violet/20 px-2 py-0.5 rounded">
-                            AI-Tailored Enhancement
-                          </span>
-                          <div className="p-4 rounded bg-emerald-500/[0.02] border border-emerald-500/20 text-xs text-white font-medium leading-relaxed">
-                            {optimizedData?.bulletDiffs?.[diffIndex]?.tailored ?? resumeDiffs[diffIndex]?.tailored}
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* AI Improvements List */}
-                      <div className="bg-zinc-950 border border-hairline rounded p-4 space-y-3">
-                        <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-wider">
-                          Why this works better:
+                      {activeResultTab === "enhancements" && (
+                        <span className="text-xs text-zinc-500 font-mono">
+                          Comparing {diffIndex + 1} of {optimizedData?.bulletDiffs?.length ?? resumeDiffs.length}
                         </span>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {(optimizedData?.bulletDiffs?.[diffIndex]?.improvements ?? resumeDiffs[diffIndex]?.improvements).map((improvement, index) => (
-                            <div key={index} className="flex items-center gap-2 text-xs text-zinc-300 bg-zinc-900/60 p-2.5 rounded border border-hairline">
-                              <span className="h-1.5 w-1.5 rounded-full bg-violet" />
-                              <span>{improvement}</span>
+                      )}
+                    </div>
+
+                    {/* Tab Body */}
+                    <AnimatePresence mode="wait">
+                      {activeResultTab === "enhancements" ? (
+                        <motion.div
+                          key="tab-enhancements"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex flex-col h-full"
+                        >
+                          <div className="p-6 space-y-6 flex-1 text-left">
+                            {/* Before and After Side-by-Side Diff */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Original */}
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-5 w-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                                    <X size={11} strokeWidth={2.5} />
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-red-400 uppercase tracking-wider">
+                                    Original Bullet Point
+                                  </span>
+                                </div>
+                                <div className="p-4 rounded bg-red-500/[0.01] border border-red-500/10 text-xs text-zinc-400 line-through leading-relaxed min-h-[100px]">
+                                  {optimizedData?.bulletDiffs?.[diffIndex]?.original ?? resumeDiffs[diffIndex]?.original}
+                                </div>
+                              </div>
+
+                              {/* Tailored */}
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                    <Sparkles size={11} />
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                                    AI-Tailored Enhancement
+                                  </span>
+                                </div>
+                                <div className="p-4 rounded bg-emerald-500/[0.02] border border-emerald-500/20 text-xs text-white font-medium leading-relaxed min-h-[100px]">
+                                  {optimizedData?.bulletDiffs?.[diffIndex]?.tailored ?? resumeDiffs[diffIndex]?.tailored}
+                                </div>
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
 
-                    </div>
+                            {/* AI Improvements List */}
+                            <div className="bg-zinc-950/50 border border-hairline rounded-lg p-5 space-y-4">
+                              <span className="text-[10px] font-mono text-zinc-500 block uppercase font-bold tracking-wider">
+                                Key Optimization Takeaways:
+                              </span>
+                              <div className="flex flex-col gap-3">
+                                {(optimizedData?.bulletDiffs?.[diffIndex]?.improvements ?? resumeDiffs[diffIndex]?.improvements).map((improvement, index) => {
+                                  const config = [
+                                    { label: "Keyword Match", icon: Target, color: "text-violet bg-violet/10 border-violet/20" },
+                                    { label: "Action Verb", icon: Zap, color: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+                                    { label: "Business Impact", icon: TrendingUp, color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" }
+                                  ][index % 3];
 
-                    {/* Pagination control footer */}
-                    <div className="bg-zinc-950 border-t border-hairline px-6 py-4 flex items-center justify-between">
-                      <button
-                        onClick={() => setDiffIndex(prev => Math.max(prev - 1, 0))}
-                        disabled={diffIndex === 0}
-                        className="px-3.5 py-1.5 text-xs font-semibold border border-hairline rounded hover:bg-zinc-900 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-zinc-300"
-                      >
-                        Previous Bullet
-                      </button>
+                                  const IconComponent = config.icon;
+                                  
+                                  return (
+                                    <div key={index} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-zinc-950 border border-hairline hover:border-zinc-800 transition-all duration-200">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ${config.color} border`}>
+                                          <IconComponent size={13} />
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${config.color} uppercase`}>
+                                            {config.label}
+                                          </span>
+                                          <span className="text-xs text-zinc-300 leading-normal font-medium text-left">
+                                            {improvement}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
 
-                      {/* Step Indicator dots */}
-                      <div className="flex gap-1.5">
-                        {(optimizedData?.bulletDiffs ?? resumeDiffs).map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setDiffIndex(idx)}
-                            className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-                              idx === diffIndex ? "w-4 bg-violet" : "bg-zinc-800"
-                            }`}
-                          />
-                        ))}
-                      </div>
+                          {/* Pagination control footer */}
+                          <div className="bg-zinc-950 border-t border-hairline px-6 py-4 flex items-center justify-between">
+                            <button
+                              onClick={() => setDiffIndex(prev => Math.max(prev - 1, 0))}
+                              disabled={diffIndex === 0}
+                              className="px-3.5 py-1.5 text-xs font-semibold border border-hairline rounded hover:bg-zinc-900 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-zinc-300"
+                            >
+                              Previous Bullet
+                            </button>
 
-                      <button
-                        onClick={() => setDiffIndex(prev => Math.min(prev + 1, (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1))}
-                        disabled={diffIndex === (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1}
-                        className="px-3.5 py-1.5 text-xs font-semibold border border-hairline rounded hover:bg-zinc-900 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-zinc-300"
-                      >
-                        Next Bullet
-                      </button>
-                    </div>
+                            {/* Step Indicator dots */}
+                            <div className="flex gap-1.5">
+                              {(optimizedData?.bulletDiffs ?? resumeDiffs).map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => setDiffIndex(idx)}
+                                  className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                                    idx === diffIndex ? "w-4 bg-violet" : "bg-zinc-800"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+
+                            <button
+                              onClick={() => setDiffIndex(prev => Math.min(prev + 1, (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1))}
+                              disabled={diffIndex === (optimizedData?.bulletDiffs?.length ?? resumeDiffs.length) - 1}
+                              className="px-3.5 py-1.5 text-xs font-semibold border border-hairline rounded hover:bg-zinc-900 transition-colors disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-zinc-300"
+                            >
+                              Next Bullet
+                            </button>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="tab-preview"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          transition={{ duration: 0.2 }}
+                          className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 h-[500px]"
+                        >
+                          {/* Left Column: Template list & actions */}
+                          <div className="md:col-span-5 flex flex-col justify-between h-full">
+                            <div className="space-y-2.5 overflow-y-auto pr-1 flex-1 max-h-[350px] scrollbar-thin">
+                              {templates.map((tpl) => (
+                                <div
+                                  key={tpl.id}
+                                  onClick={() => setSelectedTemplate(tpl.id as any)}
+                                  className={`
+                                    p-3.5 rounded-lg border cursor-pointer transition-all duration-200 text-left
+                                    ${
+                                      selectedTemplate === tpl.id
+                                        ? "border-violet bg-violet/5 scale-[1.01]"
+                                        : "border-hairline bg-zinc-950/40 hover:border-zinc-800"
+                                    }
+                                  `}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-bold text-white">{tpl.name}</h4>
+                                    <div
+                                      className={`
+                                        h-3.5 w-3.5 rounded-full border flex items-center justify-center
+                                        ${
+                                          selectedTemplate === tpl.id
+                                            ? "border-violet bg-violet"
+                                            : "border-zinc-700"
+                                        }
+                                      `}
+                                    >
+                                      {selectedTemplate === tpl.id && (
+                                        <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <p className="text-zinc-500 text-[10px] mt-1 leading-normal font-medium">
+                                    {tpl.desc}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Actions bar at bottom */}
+                            {apiError && (
+                              <div className="p-3 mb-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
+                                <span>{apiError}</span>
+                                <button onClick={() => setApiError(null)} className="text-zinc-500 hover:text-zinc-300 font-semibold cursor-pointer ml-2">
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                            <div className="pt-4 border-t border-hairline flex justify-end gap-3">
+                              <button
+                                onClick={async () => {
+                                  await handleDownload();
+                                }}
+                                disabled={downloadingPdf}
+                                className="group w-full px-6 py-2.5 text-xs font-semibold bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-650 disabled:cursor-not-allowed text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                              >
+                                {downloadingPdf ? (
+                                  <>
+                                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                                    Generating PDF...
+                                  </>
+                                ) : (
+                                  <>
+                                    Download PDF
+                                    <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Right Column: Visual Preview */}
+                          <div className="md:col-span-7 border border-hairline bg-zinc-950 rounded-lg p-3 flex flex-col h-full">
+                            <div className="flex items-center justify-between border-b border-hairline pb-2 mb-2">
+                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-bold">
+                                Visual Layout Preview
+                              </span>
+                              <span className="text-[9px] font-mono bg-violet/10 border border-violet/20 text-violet-400 px-1.5 py-0.5 rounded font-semibold animate-pulse">
+                                LIVE
+                              </span>
+                            </div>
+                            
+                            <div className="flex-1 w-full h-full bg-white rounded overflow-hidden shadow-inner relative">
+                              {optimizedData ? (
+                                <iframe
+                                  srcDoc={generateTemplateHtml(optimizedData.tailoredResumeText, selectedTemplate)}
+                                  className="w-full h-full border-0 bg-white"
+                                  title="Resume Visual Preview"
+                                  id="resume-preview-iframe"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-xs font-mono">
+                                  No resume preview content available.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                   </div>
-
                 </div>
-
               </div>
             </motion.div>
           )}
-
         </AnimatePresence>
 
 

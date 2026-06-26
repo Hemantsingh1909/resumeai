@@ -4,21 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles, LogOut, ChevronDown, User } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, ChevronDown, User, Crown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   {
+    title: "Resume Builder",
+    href: "/builder",
+    isAbsolute: true,
+  },
+  {
     title: "How it Works",
-    href: "#how-it-works",
+    href: "/#how-it-works",
   },
   {
     title: "Features",
-    href: "#features",
+    href: "/#features",
   },
   {
     title: "FAQ",
-    href: "#faq",
+    href: "/#faq",
   },
 ];
 
@@ -65,27 +70,44 @@ export default function Navbar() {
               className="hidden items-center gap-1 md:flex"
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {navItems.map((item, index) => (
-                <a
-                  key={item.title}
-                  href={item.href}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  className="relative px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg"
-                >
-                  {hoveredIndex === index && (
-                    <motion.span
-                      layoutId="nav-hover-pill"
-                      className="absolute inset-0 bg-zinc-100/70 dark:bg-zinc-800/50 rounded-lg -z-10"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 30,
-                      }}
-                    />
-                  )}
-                  {item.title}
-                </a>
-              ))}
+              {navItems.map((item, index) => {
+                const className = "relative px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg";
+                const content = (
+                  <>
+                    {hoveredIndex === index && (
+                      <motion.span
+                        layoutId="nav-hover-pill"
+                        className="absolute inset-0 bg-zinc-100/70 dark:bg-zinc-800/50 rounded-lg -z-10"
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                    {item.title}
+                  </>
+                );
+                return item.isAbsolute ? (
+                  <Link
+                    key={item.title}
+                    href={item.href}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    className={className}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <a
+                    key={item.title}
+                    href={item.href}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    className={className}
+                  >
+                    {content}
+                  </a>
+                );
+              })}
             </nav>
 
             {/* Desktop Actions */}
@@ -129,6 +151,15 @@ export default function Navbar() {
                           >
                             <Sparkles size={14} className="text-violet" />
                             Tailor Resume Dashboard
+                          </Link>
+                          
+                          <Link
+                            href="/builder"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors"
+                          >
+                            <Crown size={14} className="text-amber-500" />
+                            Premium Resume Builder
                           </Link>
                           
                           <button
@@ -208,14 +239,25 @@ export default function Navbar() {
           >
             <div className="p-6 space-y-4">
               {navItems.map((item) => (
-                <a
-                  key={item.title}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-2 text-base font-medium text-zinc-900 dark:text-zinc-100 rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors"
-                >
-                  {item.title}
-                </a>
+                item.isAbsolute ? (
+                  <Link
+                    key={item.title}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-2 text-base font-medium text-zinc-900 dark:text-zinc-100 rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors"
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  <a
+                    key={item.title}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-2 text-base font-medium text-zinc-900 dark:text-zinc-100 rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors"
+                  >
+                    {item.title}
+                  </a>
+                )
               ))}
 
               <div className="border-t border-hairline pt-4 space-y-3">

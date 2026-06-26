@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, ChevronDown, User } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   {
@@ -28,6 +29,8 @@ const navItems = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const { user, signOut } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
     <>
@@ -81,26 +84,84 @@ export default function Navbar() {
             {/* Desktop Actions */}
 
             <div className="hidden items-center gap-4 md:flex">
+              {user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors rounded-lg bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
+                  >
+                    <div className="h-6 w-6 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-xs font-semibold uppercase">
+                      {user.email.charAt(0)}
+                    </div>
+                    <span className="max-w-[120px] truncate">{user.name || user.email}</span>
+                    <ChevronDown size={14} className={`text-zinc-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
 
-              <Link href="/dashboard?auth=signin">
-                <button className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 cursor-pointer">
-                  Sign In
-                </button>
-              </Link>
+                  <AnimatePresence>
+                    {dropdownOpen && (
+                      <>
+                        {/* Dropdown Backdrop */}
+                        <div className="fixed inset-0 z-45" onClick={() => setDropdownOpen(false)} />
+                        
+                        <motion.div
+                          initial={{ opacity: 0, y: 5, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 5, scale: 0.98 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2 w-52 rounded-md bg-canvas border border-hairline p-2.5 shadow-level-5 z-50 text-left"
+                        >
+                          <div className="px-2 py-1.5 border-b border-hairline mb-1.5">
+                            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Signed in as</p>
+                            <p className="text-xs text-zinc-300 font-medium truncate mt-0.5">{user.email}</p>
+                          </div>
+                          
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors"
+                          >
+                            <Sparkles size={14} className="text-violet" />
+                            Tailor Resume Dashboard
+                          </Link>
+                          
+                          <button
+                            onClick={() => {
+                              signOut();
+                              setDropdownOpen(false);
+                            }}
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-red-400 hover:text-red-300 rounded hover:bg-red-500/10 transition-colors cursor-pointer mt-1"
+                          >
+                            <LogOut size={14} />
+                            Sign Out
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <>
+                  <Link href="/dashboard?auth=signin">
+                    <button className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 cursor-pointer">
+                      Sign In
+                    </button>
+                  </Link>
 
-              <Link href="/dashboard">
-                <motion.button
-                  whileHover={{
-                    scale: 1.02,
-                  }}
-                  whileTap={{
-                    scale: 0.98,
-                  }}
-                  className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer"
-                >
-                  Start Free
-                </motion.button>
-              </Link>
+                  <Link href="/dashboard">
+                    <motion.button
+                      whileHover={{
+                        scale: 1.02,
+                      }}
+                      whileTap={{
+                        scale: 0.98,
+                      }}
+                      className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer"
+                    >
+                      Start Free
+                    </motion.button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile */}
@@ -151,18 +212,51 @@ export default function Navbar() {
               ))}
 
               <div className="border-t border-hairline pt-4 space-y-3">
-                <Link href="/dashboard?auth=signin" onClick={() => setMobileOpen(false)} className="block">
-                  <button className="w-full px-4 py-2.5 rounded-lg border border-hairline text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
-                    Sign In
-                  </button>
-                </Link>
+                {user ? (
+                  <>
+                    <div className="px-4 py-2.5 bg-zinc-900 border border-hairline rounded flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-sm font-semibold uppercase">
+                        {user.email.charAt(0)}
+                      </div>
+                      <div className="text-left overflow-hidden">
+                        <p className="text-xs font-mono text-zinc-500 uppercase tracking-wider">Active Account</p>
+                        <p className="text-sm text-white font-medium truncate">{user.email}</p>
+                      </div>
+                    </div>
 
-                <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
-                  <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
-                    Start Free
-                  </button>
-                </Link>
+                    <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
+                      <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer flex items-center justify-center gap-2">
+                        <Sparkles size={15} />
+                        Tailor Resume Dashboard
+                      </button>
+                    </Link>
 
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setMobileOpen(false);
+                      }}
+                      className="w-full px-4 py-2.5 rounded-lg border border-red-500/20 text-red-400 font-medium hover:bg-red-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <LogOut size={15} />
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/dashboard?auth=signin" onClick={() => setMobileOpen(false)} className="block">
+                      <button className="w-full px-4 py-2.5 rounded-lg border border-hairline text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
+                        Sign In
+                      </button>
+                    </Link>
+
+                    <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
+                      <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
+                        Start Free
+                      </button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

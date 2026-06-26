@@ -19,7 +19,13 @@ import {
   ChevronRight,
   TrendingUp,
   FileCheck,
+  Trash2,
+  Plus,
+  User,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 // Types for resume optimization
 interface BulletDiff {
@@ -98,21 +104,38 @@ const analysisSteps = [
 
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const {
+    user,
+    savedResumes,
+    signUp,
+    signIn,
+    signOut,
+    saveResume,
+    deleteResume,
+  } = useAuth();
   
   // App states: 1 = Upload, 2 = Job Description, 3 = Analysis, 4 = Results
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedFile, setSelectedFile] = useState<typeof sampleResumeFile | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; size: string; uploadedAt: string } | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
+  
+  // Auth state
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authType, setAuthType] = useState<"signup" | "signin">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
+  
+  // Active layouts
   const [isDragging, setIsDragging] = useState(false);
   const [diffIndex, setDiffIndex] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [hasSavedThisRun, setHasSavedThisRun] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -127,6 +150,22 @@ function DashboardContent() {
       setShowAuthModal(true);
     }
   }, [searchParams]);
+
+  // Auto-save resume if user is logged in and results are generated
+  useEffect(() => {
+    if (step === 4 && user && !hasSavedThisRun) {
+      saveResume(
+        jobDescription.split("\n")[0] || "Senior Frontend Engineer",
+        resumeText || sampleResumeContent,
+        getTailoredResumeText(),
+        95
+      )
+        .then(() => {
+          setHasSavedThisRun(true);
+        })
+        .catch((err) => console.error("Error auto-saving resume:", err));
+    }
+  }, [step, user, hasSavedThisRun]);
 
   // Handle fake file drag & drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -176,6 +215,7 @@ function DashboardContent() {
     setStep(3);
     setAnalysisProgress(0);
     setCurrentAnalysisStep(0);
+    setHasSavedThisRun(false);
   };
 
   useEffect(() => {
@@ -209,10 +249,9 @@ function DashboardContent() {
     return () => clearInterval(progressInterval);
   }, [step]);
 
-  // Handle dynamic download of the tailored resume
-  const handleDownload = () => {
-    // Generate simple tailored resume text
-    const tailoredResume = `ALEX RIVERA
+  // Construct optimized resume text
+  const getTailoredResumeText = () => {
+    return `ALEX RIVERA
 alex.rivera@dev.io | +1 (555) 019-2834 | San Francisco, CA
 
 PROFESSIONAL SUMMARY
@@ -228,6 +267,11 @@ Senior Frontend Developer | TechCorp (2024 - Present)
 Software Engineer Intern | CodeLabs (2023)
 - Wrote highly structured, modular JavaScript and React code for marketing and onboarding interfaces.
 - Identified and resolved 15+ complex responsive CSS/layout styling issues across tablet and mobile viewports.`;
+  };
+
+  // Handle dynamic download of the tailored resume
+  const handleDownload = () => {
+    const tailoredResume = getTailoredResumeText();
 
     // Trigger standard browser file download
     const blob = new Blob([tailoredResume], { type: "text/plain;charset=utf-8" });
@@ -242,11 +286,53 @@ Software Engineer Intern | CodeLabs (2023)
 
     setDownloadSuccess(true);
     
-    // Auto show registration modal after 1 second to minimize friction but capture lead
-    setTimeout(() => {
-      setAuthType("signup");
-      setShowAuthModal(true);
-    }, 800);
+    // Prompt lead capture registration modal for anonymous users
+    if (!user) {
+      setTimeout(() => {
+        setAuthError("");
+        setAuthType("signup");
+        setShowAuthModal(true);
+      }, 800);
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setAuthSubmitting(true);
+
+    try {
+      const res =
+        authType === "signup"
+          ? await signUp(email, password)
+          : await signIn(email, password);
+
+      if (res.success) {
+        // If they register/login while having results active, immediately save it to their new profile!
+        if (step === 4 && !hasSavedThisRun) {
+          try {
+            await saveResume(
+              jobDescription.split("\n")[0] || "Senior Frontend Engineer",
+              resumeText || sampleResumeContent,
+              getTailoredResumeText(),
+              95
+            );
+            setHasSavedThisRun(true);
+          } catch (saveErr) {
+            console.error("Failed to save resume on login", saveErr);
+          }
+        }
+        setShowAuthModal(false);
+        setEmail("");
+        setPassword("");
+      } else {
+        setAuthError(res.error || "An error occurred. Please try again.");
+      }
+    } catch (err) {
+      setAuthError("Auth process encountered an unexpected issue.");
+    } finally {
+      setAuthSubmitting(false);
+    }
   };
 
   const resetFlow = () => {
@@ -255,6 +341,7 @@ Software Engineer Intern | CodeLabs (2023)
     setResumeText("");
     setJobDescription("");
     setDownloadSuccess(false);
+    setHasSavedThisRun(false);
   };
 
   return (
@@ -296,16 +383,69 @@ Software Engineer Intern | CodeLabs (2023)
             </span>
           </div>
 
-          <div>
-            <button
-              onClick={() => {
-                setAuthType("signin");
-                setShowAuthModal(true);
-              }}
-              className="px-4 py-1.5 text-xs font-semibold border border-hairline rounded-sm hover:bg-canvas-soft transition-colors cursor-pointer text-zinc-300"
-            >
-              Sign In
-            </button>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors rounded-sm bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
+                >
+                  <div className="h-5 w-5 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-[10px] font-bold uppercase">
+                    {user.email.charAt(0)}
+                  </div>
+                  <span className="max-w-[100px] truncate">{user.name || user.email}</span>
+                  <ChevronDown size={12} className={`text-zinc-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 5, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 5, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-48 rounded-md bg-canvas border border-hairline p-2 shadow-level-5 z-50 text-left"
+                      >
+                        <div className="px-2 py-1.5 border-b border-hairline mb-1 text-[10px] text-zinc-500 font-mono truncate">
+                          {user.email}
+                        </div>
+                        <button
+                          onClick={resetFlow}
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-left text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors cursor-pointer"
+                        >
+                          <Plus size={13} />
+                          New Tailoring Run
+                        </button>
+                        <button
+                          onClick={() => {
+                            signOut();
+                            setDropdownOpen(false);
+                            resetFlow();
+                          }}
+                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-red-400 hover:text-red-300 rounded hover:bg-red-500/10 transition-colors cursor-pointer mt-0.5"
+                        >
+                          <LogOut size={13} />
+                          Sign Out
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthError("");
+                  setAuthType("signin");
+                  setShowAuthModal(true);
+                }}
+                className="px-4 py-1.5 text-xs font-semibold border border-hairline rounded-sm hover:bg-canvas-soft transition-colors cursor-pointer text-zinc-300"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -403,24 +543,27 @@ Software Engineer Intern | CodeLabs (2023)
               </div>
 
               {/* Sample resume helper */}
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-zinc-950 border border-hairline">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded flex items-center justify-center">
-                    <FileText size={18} />
+              {!selectedFile && (
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-zinc-950 border border-hairline">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded flex items-center justify-center">
+                      <FileText size={18} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-white">No resume file on hand?</p>
+                      <p className="text-[11px] text-zinc-500">Test the tailoring engine using our high-fidelity sample.</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-white">No resume file on hand?</p>
-                    <p className="text-[11px] text-zinc-500">Test the tailoring engine using our high-fidelity sample.</p>
-                  </div>
+                  <button
+                    onClick={useSampleData}
+                    className="w-full sm:w-auto px-4 py-1.5 text-xs font-bold bg-violet hover:bg-violet-deep text-white rounded-sm transition-colors cursor-pointer"
+                  >
+                    Use Sample Resume
+                  </button>
                 </div>
-                <button
-                  onClick={useSampleData}
-                  className="w-full sm:w-auto px-4 py-1.5 text-xs font-bold bg-violet hover:bg-violet-deep text-white rounded-sm transition-colors cursor-pointer"
-                >
-                  Use Sample Resume
-                </button>
-              </div>
+              )}
 
+              {/* Action buttons */}
               {selectedFile && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -435,6 +578,61 @@ Software Engineer Intern | CodeLabs (2023)
                     <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </motion.div>
+              )}
+
+              {/* Saved Resumes History Section */}
+              {user && savedResumes.length > 0 && (
+                <div className="mt-12 space-y-4">
+                  <div className="flex items-center justify-between border-b border-hairline pb-2">
+                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider font-semibold">
+                      Your Tailored Resumes ({savedResumes.length})
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {savedResumes.map((res) => (
+                      <div
+                        key={res.id}
+                        className="flex items-center justify-between p-4 rounded-lg bg-canvas border border-hairline shadow-sm hover:border-zinc-800 transition-all duration-200"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden text-left">
+                          <div className="h-9 w-9 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded flex items-center justify-center flex-shrink-0">
+                            <FileText size={18} />
+                          </div>
+                          <div className="overflow-hidden">
+                            <p className="text-xs font-bold text-white truncate">{res.jobTitle}</p>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">
+                              Tailored {res.createdAt} • Score: <span className="text-violet font-semibold">{res.score}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setResumeText(res.originalText);
+                              setJobDescription(res.jobTitle);
+                              setStep(4);
+                              setHasSavedThisRun(true);
+                              setDownloadSuccess(false);
+                            }}
+                            className="px-3 py-1.5 text-[11px] font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-hairline rounded-sm transition-colors cursor-pointer"
+                          >
+                            View
+                          </button>
+                          
+                          <button
+                            onClick={() => deleteResume(res.id)}
+                            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors cursor-pointer"
+                            aria-label="Delete resume"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </motion.div>
           )}
@@ -521,7 +719,6 @@ Software Engineer Intern | CodeLabs (2023)
               className="w-full max-w-md mx-auto text-center py-8"
             >
               <div className="relative inline-flex items-center justify-center h-28 w-28 rounded-full mb-8">
-                {/* Dynamic circular loader matching vercel mesh gradient style */}
                 <div className="absolute inset-0 rounded-full border-4 border-zinc-900" />
                 <motion.div
                   className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet border-r-highlight-pink"
@@ -545,7 +742,6 @@ Software Engineer Intern | CodeLabs (2023)
                   <span className="text-xs font-mono font-bold text-violet">{analysisProgress}%</span>
                 </div>
                 
-                {/* Horizontal Progress Bar */}
                 <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-6">
                   <motion.div
                     className="h-full bg-gradient-to-r from-violet to-highlight-pink"
@@ -553,7 +749,6 @@ Software Engineer Intern | CodeLabs (2023)
                   />
                 </div>
 
-                {/* Animated logs */}
                 <div className="space-y-3 font-mono text-[11px] leading-relaxed">
                   {analysisSteps.map((stepText, idx) => {
                     const isCompleted = idx < currentAnalysisStep;
@@ -597,10 +792,10 @@ Software Engineer Intern | CodeLabs (2023)
             >
               {/* Header section with actions */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-hairline pb-8">
-                <div>
+                <div className="text-left">
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 text-xs font-semibold">
                     <CheckCircle2 size={13} strokeWidth={2} />
-                    Resume Successfully Optimized
+                    {user ? "Saved to your Profile history" : "Resume Successfully Optimized"}
                   </div>
                   <h1 className="text-3xl font-semibold tracking-tight text-white mt-4">
                     Tailored Resume Ready.
@@ -673,7 +868,7 @@ Software Engineer Intern | CodeLabs (2023)
                       Target Keyword Analysis
                     </h3>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 text-left">
                       {/* Keyword list */}
                       <div>
                         <span className="text-[11px] font-bold text-zinc-400 block mb-2">Matched Job Requirements (15)</span>
@@ -701,7 +896,7 @@ Software Engineer Intern | CodeLabs (2023)
                   </div>
 
                   {/* Formatting checklist */}
-                  <div className="rounded-lg border border-hairline bg-zinc-950 p-6 space-y-3.5">
+                  <div className="rounded-lg border border-hairline bg-zinc-950 p-6 space-y-3.5 text-left">
                     <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
                       ATS Compliance Check
                     </h3>
@@ -736,7 +931,7 @@ Software Engineer Intern | CodeLabs (2023)
                       </span>
                     </div>
 
-                    <div className="p-6 space-y-6 flex-1">
+                    <div className="p-6 space-y-6 flex-1 text-left">
                       
                       {/* Before and After Side-by-Side Diff */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -842,7 +1037,7 @@ Software Engineer Intern | CodeLabs (2023)
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ type: "spring", duration: 0.4 }}
-                className="relative z-10 w-full max-w-sm rounded-lg border border-hairline bg-canvas p-8 shadow-level-5 m-6"
+                className="relative z-10 w-full max-w-sm rounded-lg border border-hairline bg-canvas p-8 shadow-level-5 m-6 text-left animate-none"
               >
                 {/* Close button */}
                 <button
@@ -869,14 +1064,20 @@ Software Engineer Intern | CodeLabs (2023)
                   </p>
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); alert(authType === "signup" ? "Account successfully created!" : "Signed in successfully!"); setShowAuthModal(false); }} className="space-y-4">
+                {authError && (
+                  <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                    {authError}
+                  </div>
+                )}
+
+                <form onSubmit={handleAuthSubmit} className="space-y-4">
                   
                   <div className="space-y-1.5">
                     <label htmlFor="email-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-600" />
+                      <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
                       <input
                         id="email-input"
                         type="email"
@@ -894,7 +1095,7 @@ Software Engineer Intern | CodeLabs (2023)
                       Password
                     </label>
                     <div className="relative">
-                      <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-600" />
+                      <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
                       <input
                         id="password-input"
                         type="password"
@@ -909,16 +1110,26 @@ Software Engineer Intern | CodeLabs (2023)
 
                   <button
                     type="submit"
-                    className="w-full h-10 bg-primary hover:bg-zinc-200 text-on-primary font-semibold text-xs rounded-sm transition-colors shadow-sm cursor-pointer mt-2"
+                    disabled={authSubmitting}
+                    className="w-full h-10 bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-on-primary font-semibold text-xs rounded-sm transition-colors shadow-sm cursor-pointer mt-2 flex items-center justify-center gap-2"
                   >
-                    {authType === "signup" ? "Create Free Account" : "Sign In"}
+                    {authSubmitting ? (
+                      <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                    ) : authType === "signup" ? (
+                      "Create Free Account"
+                    ) : (
+                      "Sign In"
+                    )}
                   </button>
                 </form>
 
                 {/* Bottom toggle link */}
                 <div className="text-center mt-6 pt-4 border-t border-hairline">
                   <button
-                    onClick={() => setAuthType(prev => prev === "signup" ? "signin" : "signup")}
+                    onClick={() => {
+                      setAuthError("");
+                      setAuthType((prev) => (prev === "signup" ? "signin" : "signup"));
+                    }}
                     className="text-xs font-semibold text-violet hover:text-violet-soft transition-colors cursor-pointer"
                   >
                     {authType === "signup"
@@ -940,7 +1151,7 @@ Software Engineer Intern | CodeLabs (2023)
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-zinc-300">Home</Link>
             <span className="h-3 w-px bg-zinc-800" />
-            <button onClick={() => { setAuthType("signup"); setShowAuthModal(true); }} className="hover:text-zinc-300">
+            <button onClick={() => { setAuthError(""); setAuthType("signup"); setShowAuthModal(true); }} className="hover:text-zinc-300">
               Create Account
             </button>
           </div>

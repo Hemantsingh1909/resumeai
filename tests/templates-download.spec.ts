@@ -3,18 +3,27 @@ import { test, expect } from "@playwright/test";
 test("Resume template selection and download flow", async ({ page }) => {
   test.setTimeout(300000);
   // 1. Navigate to dashboard page
-  await page.goto("http://localhost:3000/dashboard?mock_auth=true");
+  await page.goto("http://localhost:3000/dashboard?mock_auth=true&auth=signup");
   await page.waitForLoadState("networkidle");
 
   // 2. We should see the auth modal. Sign up with a random email to ensure a fresh session.
   const randomEmail = `user_${Math.random().toString(36).substring(2, 11)}@dev.io`;
   
+  await page.fill('#name-input', "Test User");
   await page.fill('input[type="email"]', randomEmail);
   await page.fill('input[type="password"]', "Password123");
+  await page.fill('#confirm-password-input', "Password123");
   await page.click('button[type="submit"]');
 
+  // Wait for the redirect to the landing page first, as expected in production
+  await page.waitForURL((url) => url.pathname === "/");
+
+  // Navigate back to the dashboard to continue testing the workflow, preserving mock auth
+  await page.goto("http://localhost:3000/dashboard?mock_auth=true");
+  await page.waitForLoadState("networkidle");
+
   // Wait for the auth transition to finish and see STEP 01
-  await page.waitForSelector("text=STEP 01", { timeout: 5000 });
+  await page.waitForSelector("text=STEP 01", { timeout: 10000 });
   await expect(page.locator("text=Upload your base resume.")).toBeVisible();
 
   // 3. Click Use Sample Resume

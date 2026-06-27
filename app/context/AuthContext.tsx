@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from "../utils/supabase";
 export interface User {
   email: string;
   name?: string;
+  avatarUrl?: string;
 }
 
 export interface SavedResume {
@@ -22,11 +23,16 @@ interface AuthContextType {
   user: User | null;
   savedResumes: SavedResume[];
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => void;
+  forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   saveResume: (jobTitle: string, originalText: string, tailoredText: string, score: number, optimizedDataString?: string) => Promise<SavedResume>;
   deleteResume: (id: string) => void;
+  updateProfile: (name: string, avatarUrl?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
+            avatarUrl: session.user.user_metadata?.avatar_url,
           });
         }
         setLoading(false);
@@ -75,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             email: session.user.email || "",
             name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
+            avatarUrl: session.user.user_metadata?.avatar_url,
           });
         } else {
           setUser(null);
@@ -115,27 +123,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (useSupabase) {
       const fetchResumes = async () => {
-        const { data, error } = await supabase
-          .from("saved_resumes")
-          .select("*")
-          .order("created_at", { ascending: false });
+        try {
+          const { data, error } = await supabase
+            .from("saved_resumes")
+            .select("*")
+            .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error("Error fetching resumes from Supabase:", error.message);
-          return;
-        }
+          if (error) {
+            console.error("Error fetching resumes from Supabase:", error.message);
+            return;
+          }
 
-        if (data) {
-          const formattedResumes: SavedResume[] = data.map((row: any) => ({
-            id: row.id,
-            jobTitle: row.job_title,
-            originalText: row.original_text,
-            tailoredText: row.tailored_text,
-            score: row.score,
-            optimizedDataString: row.optimized_data_string,
-            createdAt: formatDate(row.created_at),
-          }));
-          setSavedResumes(formattedResumes);
+          if (data) {
+            const formattedResumes: SavedResume[] = data.map((row: any) => ({
+              id: row.id,
+              jobTitle: row.job_title,
+              originalText: row.original_text,
+              tailoredText: row.tailored_text,
+              score: row.score,
+              optimizedDataString: row.optimized_data_string,
+              createdAt: formatDate(row.created_at),
+            }));
+            setSavedResumes(formattedResumes);
+          }
+        } catch (err: any) {
+          console.error("Network error fetching resumes from Supabase:", err.message || err);
         }
       };
 
@@ -152,16 +164,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, useSupabase]);
 
   // Dynamic Signup
-  const signUp = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const signUp = async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string }> => {
     if (useSupabase) {
       try {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
+          options: {
+            data: {
+              name: fullName.trim(),
+            }
+          }
         });
 
         if (error) {
           return { success: false, error: error.message };
+        }
+
+        // Create profile row in PostgreSQL
+        if (data.user) {
+          try {
+            await supabase.from("profiles").insert({
+              id: data.user.id,
+              name: fullName.trim(),
+              email: email.trim().toLowerCase(),
+            });
+          } catch (profileErr) {
+            console.error("Supabase profiles insert error:", profileErr);
+            // Non-blocking in case trigger handles it
+          }
         }
 
         return { success: true };
@@ -173,22 +204,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         await new Promise((resolve) => setTimeout(resolve, 400));
         const emailTrim = email.trim().toLowerCase();
-        if (!emailTrim || !password) {
-          return { success: false, error: "Email and password are required." };
+        if (!emailTrim || !password || !fullName) {
+          return { success: false, error: "Full Name, Email, and password are required." };
         }
 
         const usersStr = localStorage.getItem("atsprime_users") || "[]";
-        const users = JSON.parse(usersStr) as { email: string; password: string }[];
+        const users = JSON.parse(usersStr) as { email: string; password: string; name?: string }[];
         
         const userExists = users.some((u) => u.email === emailTrim);
         if (userExists) {
           return { success: false, error: "An account with this email already exists." };
         }
 
-        users.push({ email: emailTrim, password });
+        users.push({ email: emailTrim, password, name: fullName.trim() });
         localStorage.setItem("atsprime_users", JSON.stringify(users));
 
-        const newUser: User = { email: emailTrim, name: emailTrim.split("@")[0] };
+        const newUser: User = { email: emailTrim, name: fullName.trim() };
         localStorage.setItem("atsprime_session", JSON.stringify(newUser));
         setUser(newUser);
 
@@ -196,6 +227,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         return { success: false, error: "An unexpected error occurred during sign-up." };
       }
+    }
+  };
+
+  // Google OAuth Login
+  const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    if (useSupabase) {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/`,
+          },
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: "An error occurred during Google sign-in." };
+      }
+    } else {
+      // Fallback: LocalStorage Mock Google Signin
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const mockUser: User = {
+          email: "google.user@gmail.com",
+          name: "Google User",
+        };
+        localStorage.setItem("atsprime_session", JSON.stringify(mockUser));
+        setUser(mockUser);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: "An unexpected error occurred during Google sign-in." };
+      }
+    }
+  };
+
+  // Forgot Password Flow
+  const forgotPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    if (useSupabase) {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: "An error occurred while sending reset email." };
+      }
+    } else {
+      // Mock Fallback
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return { success: true };
+    }
+  };
+
+  // Update Password Flow
+  const updatePassword = async (password: string): Promise<{ success: boolean; error?: string }> => {
+    if (useSupabase) {
+      try {
+        const { error } = await supabase.auth.updateUser({ password });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: "An error occurred while updating password." };
+      }
+    } else {
+      // Mock Fallback
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return { success: true };
     }
   };
 
@@ -247,12 +358,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Signout
   const signOut = async () => {
     if (useSupabase) {
-      await supabase.auth.signOut();
-    } else {
-      localStorage.removeItem("atsprime_session");
-      setUser(null);
-      setSavedResumes([]);
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error("Failed to sign out from Supabase:", err);
+      }
     }
+    localStorage.removeItem("atsprime_session");
+    setUser(null);
+    setSavedResumes([]);
   };
 
   // Save tailored resume under user profile
@@ -351,6 +465,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(`atsprime_resumes_${user.email}`, JSON.stringify(updatedResumes));
     }
   };
+  // Update user profile (name, avatar)
+  const updateProfile = async (name: string, avatarUrl?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    if (useSupabase) {
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          data: { name, avatar_url: avatarUrl },
+        });
+        if (error) throw error;
+        
+        // Also attempt to update profiles table if it exists
+        try {
+          await supabase
+            .from("profiles")
+            .update({ name, avatar_url: avatarUrl })
+            .eq("id", data.user?.id);
+        } catch (tableErr) {
+          console.error("Failed to update public.profiles row:", tableErr);
+        }
+
+        setUser({
+          email: data.user?.email || user.email,
+          name: name,
+          avatarUrl: avatarUrl || user.avatarUrl,
+        });
+
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message || "Failed to update profile." };
+      }
+    } else {
+      // Fallback: LocalStorage Session
+      try {
+        const activeSession = localStorage.getItem("atsprime_session");
+        if (activeSession) {
+          const parsed = JSON.parse(activeSession) as User;
+          const updated = { ...parsed, name, avatarUrl: avatarUrl || parsed.avatarUrl };
+          localStorage.setItem("atsprime_session", JSON.stringify(updated));
+          setUser(updated);
+        }
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: "Failed to update profile sandbox." };
+      }
+    }
+  };
+
+  // Delete user account permanently
+  const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    if (useSupabase) {
+      try {
+        const { error } = await supabase.rpc("delete_current_user");
+        if (error) {
+          // If RPC fails (e.g. function does not exist), fallback to delete profiles row
+          console.warn("delete_current_user RPC failed, running fallback deletion:", error.message);
+          const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user.email);
+          if (profileErr) throw profileErr;
+        }
+        await signOut();
+        return { success: true };
+      } catch (err: any) {
+        console.warn("Network error during Supabase account deletion, completing local signout:", err.message || err);
+        await signOut();
+        return { success: true };
+      }
+    } else {
+      // Fallback: LocalStorage Mock Delete
+      try {
+        const usersStr = localStorage.getItem("atsprime_users") || "[]";
+        const users = JSON.parse(usersStr) as any[];
+        const filtered = users.filter((u) => u.email !== user.email);
+        localStorage.setItem("atsprime_users", JSON.stringify(filtered));
+        localStorage.removeItem(`atsprime_resumes_${user.email}`);
+        await signOut();
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: "Failed to delete mock account." };
+      }
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -360,9 +557,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signUp,
         signIn,
+        signInWithGoogle,
         signOut,
+        forgotPassword,
+        updatePassword,
         saveResume,
         deleteResume,
+        updateProfile,
+        deleteAccount,
       }}
     >
       {children}

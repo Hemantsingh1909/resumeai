@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles, LogOut, ChevronDown, User, Crown } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, ChevronDown, User, Crown, History, CreditCard, Settings } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
@@ -119,9 +119,13 @@ export default function Navbar() {
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors rounded-lg bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                   >
-                    <div className="h-6 w-6 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-xs font-semibold uppercase">
-                      {user.email.charAt(0)}
-                    </div>
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="Avatar" className="h-6 w-6 rounded-full object-cover border border-violet/30" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-xs font-semibold uppercase">
+                        {user.email.charAt(0)}
+                      </div>
+                    )}
                     <span className="max-w-[120px] truncate">{user.name || user.email}</span>
                     <ChevronDown size={14} className={`text-zinc-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
                   </button>
@@ -158,8 +162,35 @@ export default function Navbar() {
                             onClick={() => setDropdownOpen(false)}
                             className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors"
                           >
-                            <Crown size={14} className="text-amber-500" />
-                            Premium Resume Builder
+                            <Crown size={14} className="text-violet" />
+                            Resume Builder
+                          </Link>
+                          
+                          <Link
+                            href="/history"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors mt-0.5"
+                          >
+                            <History size={14} className="text-violet" />
+                            Resume History
+                          </Link>
+                          
+                          <Link
+                            href="/profile"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors mt-0.5"
+                          >
+                            <User size={14} className="text-violet" />
+                            Profile
+                          </Link>
+                          
+                          <Link
+                            href="/settings"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-zinc-300 hover:text-white rounded hover:bg-zinc-900 transition-colors mt-0.5"
+                          >
+                            <Settings size={14} className="text-violet" />
+                            Settings
                           </Link>
                           
                           <button
@@ -167,7 +198,7 @@ export default function Navbar() {
                               signOut();
                               setDropdownOpen(false);
                             }}
-                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-red-400 hover:text-red-300 rounded hover:bg-red-500/10 transition-colors cursor-pointer mt-1"
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-red-400 hover:text-red-300 rounded hover:bg-red-500/10 transition-colors cursor-pointer mt-1 border-t border-hairline pt-1.5"
                           >
                             <LogOut size={14} />
                             Sign Out
@@ -178,27 +209,19 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
               ) : (
-                <>
-                  <Link href="/dashboard?auth=signin">
-                    <button className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 cursor-pointer">
-                      Sign In
-                    </button>
-                  </Link>
-
-                  <Link href="/dashboard">
-                    <motion.button
-                      whileHover={{
-                        scale: 1.02,
-                      }}
-                      whileTap={{
-                        scale: 0.98,
-                      }}
-                      className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer"
-                    >
-                      Start Free
-                    </motion.button>
-                  </Link>
-                </>
+                <Link href="/dashboard?auth=signup">
+                  <motion.button
+                    whileHover={{
+                      scale: 1.02,
+                    }}
+                    whileTap={{
+                      scale: 0.98,
+                    }}
+                    className="px-5 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer"
+                  >
+                    Create Account
+                  </motion.button>
+                </Link>
               )}
             </div>
 
@@ -264,9 +287,13 @@ export default function Navbar() {
                 {user ? (
                   <>
                     <div className="px-4 py-2.5 bg-zinc-900 border border-hairline rounded flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-sm font-semibold uppercase">
-                        {user.email.charAt(0)}
-                      </div>
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="Avatar" className="h-8 w-8 rounded-full object-cover border border-violet/30" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-sm font-semibold uppercase">
+                          {user.email.charAt(0)}
+                        </div>
+                      )}
                       <div className="text-left overflow-hidden">
                         <p className="text-xs font-mono text-zinc-500 uppercase tracking-wider">Active Account</p>
                         <p className="text-sm text-white font-medium truncate">{user.email}</p>
@@ -292,19 +319,11 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <Link href="/dashboard?auth=signin" onClick={() => setMobileOpen(false)} className="block">
-                      <button className="w-full px-4 py-2.5 rounded-lg border border-hairline text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
-                        Sign In
-                      </button>
-                    </Link>
-
-                    <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
-                      <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
-                        Start Free
-                      </button>
-                    </Link>
-                  </>
+                  <Link href="/dashboard?auth=signup" onClick={() => setMobileOpen(false)} className="block">
+                    <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
+                      Create Account
+                    </button>
+                  </Link>
                 )}
               </div>
             </div>

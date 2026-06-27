@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, Suspense } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
+import { useAuth } from "./context/AuthContext";
 import { ReactLenis } from "lenis/react";
 import "lenis/dist/lenis.css";
 import "../sentry.client.config";
@@ -75,5 +76,40 @@ export function PHProvider({ children }: { children: React.ReactNode }) {
       </ReactLenis>
     </PostHogProvider>
   );
+}
+
+export function RouteProtector({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    const protectedPaths = ["/dashboard", "/builder", "/history", "/profile", "/settings"];
+    const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
+
+    if (isProtected && !user) {
+      const searchStr = typeof window !== "undefined" ? window.location.search : "";
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}${searchStr ? `&${searchStr.slice(1)}` : ""}`);
+    }
+  }, [user, loading, pathname, router]);
+
+  const protectedPaths = ["/dashboard", "/builder", "/history", "/profile", "/settings"];
+  const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
+
+  // Show a clean loading state or nothing while redirecting unauthenticated users
+  if (isProtected && !user) {
+    return (
+      <div className="min-h-screen bg-canvas-soft flex items-center justify-center text-ink dark:bg-zinc-950 dark:text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet border-t-transparent" />
+          <p className="text-xs text-zinc-500 font-mono tracking-wider">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 

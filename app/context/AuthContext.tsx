@@ -23,6 +23,7 @@ interface AuthContextType {
   user: User | null;
   savedResumes: SavedResume[];
   loading: boolean;
+  useSupabase: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -563,6 +564,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         savedResumes,
         loading,
+        useSupabase,
         signUp,
         signIn,
         signInWithGoogle,

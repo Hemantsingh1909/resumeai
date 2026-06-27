@@ -145,6 +145,7 @@ function DashboardContent() {
     saveResume,
     deleteResume,
     loading,
+    useSupabase,
   } = useAuth();
 
 
@@ -665,11 +666,13 @@ function DashboardContent() {
               <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
               <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
             </svg>
-            <span className="text-base font-bold tracking-tight text-white">
+             <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
               ATSPrime
-            </span>
-            <span className="text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-hairline-strong ml-1">
-              SANDBOX
+              {!useSupabase && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
+                  SANDBOX
+                </span>
+              )}
             </span>
           </Link>
 
@@ -1687,7 +1690,7 @@ function DashboardContent() {
       {/* Footer */}
       <footer className="border-t border-hairline bg-canvas py-8 px-6 mt-12 text-center text-xs text-zinc-600 dark:text-zinc-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 ATSPrime Sandbox. All rights reserved.</p>
+          <p>© 2026 {useSupabase ? "ATSPrime" : "ATSPrime Sandbox"}. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-zinc-300">Home</Link>
           </div>

@@ -20,7 +20,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function SettingsPage() {
-  const { user, signOut, deleteAccount } = useAuth();
+  const { user, signOut, deleteAccount, useSupabase } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Settings mock states
@@ -73,9 +73,11 @@ export default function SettingsPage() {
             </svg>
             <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
               ATSPrime
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
-                SANDBOX
-              </span>
+              {!useSupabase && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
+                  SANDBOX
+                </span>
+              )}
             </span>
           </Link>
 
@@ -237,8 +239,14 @@ export default function SettingsPage() {
             <h3 className="text-xs font-mono font-bold text-red-400 uppercase tracking-wider border-b border-red-500/10 pb-2">Danger Zone</h3>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="text-xs font-semibold text-white block">Delete Sandbox Account</span>
-                <p className="text-[10px] text-zinc-500 leading-normal">Permanently purge your account details and all saved resumes from PostgreSQL database.</p>
+                <span className="text-xs font-semibold text-white block">
+                  {useSupabase ? "Delete Account" : "Delete Sandbox Account"}
+                </span>
+                <p className="text-[10px] text-zinc-500 leading-normal">
+                  {useSupabase 
+                    ? "Permanently purge your profile data, configurations, and all saved resumes from the database." 
+                    : "Permanently purge your account details and all saved resumes from PostgreSQL database."}
+                </p>
               </div>
               <button 
                 onClick={() => setShowDeleteModal(true)}

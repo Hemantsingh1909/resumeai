@@ -21,7 +21,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function ProfilePage() {
-  const { user, signOut, updateProfile } = useAuth();
+  const { user, signOut, updateProfile, useSupabase } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const [name, setName] = useState(user?.name || "");
@@ -90,9 +90,11 @@ export default function ProfilePage() {
             </svg>
             <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
               ATSPrime
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
-                SANDBOX
-              </span>
+              {!useSupabase && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
+                  SANDBOX
+                </span>
+              )}
             </span>
           </Link>
 
@@ -287,7 +289,7 @@ export default function ProfilePage() {
                   <span className="text-zinc-500 font-mono uppercase tracking-wider text-[10px]">Active Status</span>
                   <span className="col-span-2 text-emerald-400 font-medium flex items-center gap-1.5">
                     <Shield size={13} className="text-emerald-500" />
-                    Verified Sandbox Member
+                    {useSupabase ? "Verified Member" : "Verified Sandbox Member"}
                   </span>
                 </div>
 
@@ -322,11 +324,11 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">Monthly Scans Used:</span>
-                  <span className="font-semibold text-white">Unlimited (Sandbox)</span>
+                  <span className="font-semibold text-white">{useSupabase ? "Unlimited" : "Unlimited (Sandbox)"}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">PDF Resumes Exported:</span>
-                  <span className="font-semibold text-white">Unlimited (Sandbox)</span>
+                  <span className="font-semibold text-white">{useSupabase ? "Unlimited" : "Unlimited (Sandbox)"}</span>
                 </div>
               </div>
             </motion.div>

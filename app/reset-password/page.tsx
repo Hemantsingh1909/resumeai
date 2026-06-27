@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const { updatePassword } = useAuth();
+  const { updatePassword, useSupabase } = useAuth();
 
   // Inputs
   const [password, setPassword] = useState("");
@@ -161,7 +161,7 @@ function ResetPasswordContent() {
       {/* Footer */}
       <footer className="border-t border-hairline dark:border-zinc-900 bg-white dark:bg-zinc-950 py-8 px-6 text-center text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 ATSPrime Sandbox. All rights reserved.</p>
+          <p>© 2026 {useSupabase ? "ATSPrime" : "ATSPrime Sandbox"}. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
           </div>

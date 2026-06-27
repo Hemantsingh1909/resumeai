@@ -22,7 +22,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function HistoryPage() {
-  const { user, savedResumes, signOut, deleteResume } = useAuth();
+  const { user, savedResumes, signOut, deleteResume, useSupabase } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
 
@@ -54,9 +54,11 @@ export default function HistoryPage() {
             </svg>
             <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
               ATSPrime
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
-                SANDBOX
-              </span>
+              {!useSupabase && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm bg-zinc-800 text-zinc-400 border border-zinc-700 tracking-wider">
+                  SANDBOX
+                </span>
+              )}
             </span>
           </Link>
 

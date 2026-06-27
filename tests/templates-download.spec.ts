@@ -15,11 +15,8 @@ test("Resume template selection and download flow", async ({ page }) => {
   await page.fill('#confirm-password-input', "Password123");
   await page.click('button[type="submit"]');
 
-  // Wait for the redirect to the landing page first, as expected in production
-  await page.waitForURL((url) => url.pathname === "/");
-
-  // Navigate back to the dashboard to continue testing the workflow, preserving mock auth
-  await page.goto("http://localhost:3000/dashboard?mock_auth=true");
+  // Wait for the redirect directly to the dashboard
+  await page.waitForURL((url) => url.pathname === "/dashboard");
   await page.waitForLoadState("networkidle");
 
   // Wait for the auth transition to finish and see STEP 01

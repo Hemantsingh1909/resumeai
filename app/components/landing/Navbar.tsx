@@ -31,7 +31,7 @@ const navItems = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
 
@@ -112,8 +112,10 @@ export default function Navbar() {
 
             {/* Desktop Actions */}
 
-            <div className="hidden items-center gap-4 md:flex">
-              {user ? (
+            <div className="hidden items-center gap-4 md:flex min-w-[140px] justify-end">
+              {loading ? (
+                <div className="h-9 w-28 rounded bg-zinc-900 border border-hairline animate-pulse" />
+              ) : user ? (
                 <div className="relative">
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -284,7 +286,9 @@ export default function Navbar() {
               ))}
 
               <div className="border-t border-hairline pt-4 space-y-3">
-                {user ? (
+                {loading ? (
+                  <div className="h-10 w-full rounded bg-zinc-900 border border-hairline animate-pulse" />
+                ) : user ? (
                   <>
                     <div className="px-4 py-2.5 bg-zinc-900 border border-hairline rounded flex items-center gap-3">
                       {user.avatarUrl ? (

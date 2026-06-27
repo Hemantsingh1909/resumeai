@@ -22,7 +22,7 @@ function LoginContent() {
   } = useAuth();
 
   const mockAuth = searchParams.get("mock_auth");
-  let redirectUrl = searchParams.get("redirect") || "/dashboard";
+  let redirectUrl = searchParams.get("redirect") || "/";
   if (mockAuth && !redirectUrl.includes("mock_auth")) {
     redirectUrl += (redirectUrl.includes("?") ? "&" : "?") + `mock_auth=${mockAuth}`;
   }
@@ -54,9 +54,9 @@ function LoginContent() {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      router.push("/");
+      router.push(redirectUrl);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectUrl]);
 
   // Handle Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,7 +88,7 @@ function LoginContent() {
         const res = await signUp(email, password, fullName);
         if (res.success) {
           if (mockAuth) {
-            router.push("/");
+            router.push(redirectUrl);
           } else {
             setStatusMessage("Check your email to verify your account.");
           }

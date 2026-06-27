@@ -41,9 +41,9 @@ function ResetPasswordContent() {
     try {
       const res = await updatePassword(password);
       if (res.success) {
-        setStatusMessage("Password updated successfully! Redirecting to dashboard...");
+        setStatusMessage("Password updated successfully! Redirecting to sign in...");
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/login");
         }, 1500);
       } else {
         setErrorMessage(res.error || "Failed to update password.");

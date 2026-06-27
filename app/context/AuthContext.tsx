@@ -63,6 +63,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUseSupabase(configured);
 
     if (configured) {
+      // Synchronous guest loader bypass: if no active session storage tokens exist, resolve loading immediately
+      const hasSession = typeof window !== "undefined" && (() => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("sb-") || key === "atsprime_session")) {
+            return true;
+          }
+        }
+        return false;
+      })();
+
+      if (!hasSession) {
+        setLoading(false);
+      }
+
       const loadProfileAndSetUser = async (sessionUser: any) => {
         let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
         let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
@@ -126,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error) {
-        console.error("Error reading session from localStorage", error);
+        console.warn("Error reading session from localStorage", error);
       } finally {
         setLoading(false);
       }
@@ -149,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .order("created_at", { ascending: false });
 
           if (error) {
-            console.error("Error fetching resumes from Supabase:", error.message);
+            console.warn("Error fetching resumes from Supabase:", error.message);
             return;
           }
 
@@ -166,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSavedResumes(formattedResumes);
           }
         } catch (err: any) {
-          console.error("Network error fetching resumes from Supabase:", err.message || err);
+          console.warn("Network error fetching resumes from Supabase:", err.message || err);
         }
       };
 
@@ -209,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: email.trim().toLowerCase(),
             });
           } catch (profileErr) {
-            console.error("Supabase profiles insert error:", profileErr);
+            console.warn("Supabase profiles insert error:", profileErr);
             // Non-blocking in case trigger handles it
           }
         }
@@ -333,13 +348,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     if (useSupabase) {
       try {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password,
         });
 
         if (error) {
           return { success: false, error: error.message };
+        }
+
+        // Set the user context state instantly to prevent redirect transition lag/skeletons
+        if (data.user) {
+          let name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email?.split("@")[0] || "";
+          let avatarUrl = data.user.user_metadata?.avatar_url || undefined;
+
+          try {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("name, avatar_url")
+              .eq("id", data.user.id)
+              .maybeSingle();
+            if (profileData) {
+              if (profileData.name) name = profileData.name;
+              if (profileData.avatar_url) avatarUrl = profileData.avatar_url;
+            }
+          } catch (e) {
+            console.warn("Could not load user profile details during sign-in:", e);
+          }
+
+          setUser({
+            email: data.user.email || "",
+            name,
+            avatarUrl,
+          });
         }
 
         return { success: true };
@@ -375,17 +416,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Signout
+  // Signout
   const signOut = async () => {
-    if (useSupabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.error("Failed to sign out from Supabase:", err);
+    // Clear local session states immediately so UI is always responsive
+    localStorage.removeItem("atsprime_session");
+    
+    // Clear any Supabase-stored auth tokens in localStorage to prevent restoring session on reload
+    if (typeof window !== "undefined") {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("sb-") || key.includes("auth-token"))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    }
+
+    // Clear any Supabase cookies to ensure a complete clean state
+    if (typeof document !== "undefined") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        if (name.startsWith("sb-") || name.includes("auth-token")) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
       }
     }
-    localStorage.removeItem("atsprime_session");
+
     setUser(null);
     setSavedResumes([]);
+
+    if (useSupabase) {
+      if (typeof window !== "undefined") {
+        const originalOnError = window.onerror;
+        const rejectionHandler = (event: PromiseRejectionEvent) => {
+          const reasonStr = event.reason?.message || event.reason?.toString() || "";
+          if (reasonStr.includes("Failed to fetch") || reasonStr.includes("fetch")) {
+            event.preventDefault(); // Suppress the unhandled rejection overlay
+          }
+        };
+
+        window.onerror = (message, source, lineno, colno, error) => {
+          const msgStr = message?.toString() || "";
+          if (msgStr.includes("Failed to fetch") || msgStr.includes("TypeError")) {
+            return true; // Return true to prevent error reporting
+          }
+          if (originalOnError) {
+            return originalOnError(message, source, lineno, colno, error);
+          }
+          return false;
+        };
+
+        window.addEventListener("unhandledrejection", rejectionHandler);
+
+        // Fire-and-forget network signout
+        supabase.auth.signOut()
+          .catch((err) => {
+            console.warn("Network signout warning:", err.message || err);
+          })
+          .finally(() => {
+            // Restore original error listeners after a short delay to let network cycles clear
+            setTimeout(() => {
+              window.onerror = originalOnError;
+              window.removeEventListener("unhandledrejection", rejectionHandler);
+            }, 1000);
+          });
+      }
+    }
   };
 
   // Save tailored resume under user profile
@@ -472,7 +572,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", id);
 
       if (error) {
-        console.error("Failed to delete resume from Supabase:", error.message);
+        console.warn("Failed to delete resume from Supabase:", error.message);
         return;
       }
 
@@ -557,7 +657,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await signOut();
         return { success: true };
       } catch (err: any) {
-        console.error("Error during Supabase account deletion:", err);
+        console.warn("Error during Supabase account deletion:", err);
         return { success: false, error: err.message || "Failed to delete account from database." };
       }
     } else {

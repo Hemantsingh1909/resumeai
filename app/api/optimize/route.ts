@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const isSampleResume = activeResumeText && activeResumeText.includes("alex.rivera@dev.io");
 
     if (isSampleResume) {
-      console.log("Detected E2E test / sample resume optimize request. Bypassing Gemini API and returning simulated high-fidelity mock directly.");
+      console.log("[GEMINI STATUS]: BYPASSED (Sample resume / E2E test detected. Bypassing live API calls to prevent rate limits.)");
       const fallbackData = {
         originalResumeText: activeResumeText,
         tailoredResumeText: activeResumeText + "\n\n[AI Optimization complete: tailored to align with requirements]",
@@ -222,7 +222,7 @@ Return the analysis response as a single JSON object matching the provided respo
     const result = await callGemini();
 
     if (!result.ok) {
-      console.warn(`Gemini API call failed with status ${result.status}. Triggering high-fidelity offline fallback simulation to ensure user and test flow continuity.`);
+      console.warn(`[GEMINI STATUS]: FAILED (API call failed with status ${result.status}). Using high-fidelity offline fallback simulator.`);
       
       const fallbackData = {
         originalResumeText: activeResumeText,
@@ -262,6 +262,7 @@ Return the analysis response as a single JSON object matching the provided respo
       return NextResponse.json(simulatedResponse);
     }
 
+    console.log("[GEMINI STATUS]: SUCCESS (Successfully connected to Gemini 2.5 Flash API. Returning optimized data.)");
     return NextResponse.json(result.data);
   } catch (err: any) {
     console.error("API route optimization error:", err);

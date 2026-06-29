@@ -16,40 +16,16 @@ export async function POST(request: Request) {
     let activeResumeText = resumeText;
     if (uploadedFileBase64) {
       try {
-        // Polyfill mock browser globals required by pdf.js inside pdf-parse in Node environments
-        // We use a custom getter/setter wrapper to prevent modules (like worker index.cjs) from overwriting them with undefined.
-        const mockClass = class {};
-        const createSafePolyfill = (globalObj: any, propName: string, fallbackClass: any) => {
-          let currentValue = fallbackClass;
-          try {
-            delete globalObj[propName];
-          } catch (e) {}
-          Object.defineProperty(globalObj, propName, {
-            get() {
-              return currentValue;
-            },
-            set(val) {
-              if (val) currentValue = val;
-            },
-            configurable: true,
-            enumerable: true
-          });
-        };
-
-        createSafePolyfill(global, "DOMMatrix", mockClass);
-        createSafePolyfill(globalThis, "DOMMatrix", mockClass);
-        createSafePolyfill(global, "ImageData", mockClass);
-        createSafePolyfill(globalThis, "ImageData", mockClass);
-        createSafePolyfill(global, "Path2D", mockClass);
-        createSafePolyfill(globalThis, "Path2D", mockClass);
-
-        const { PDFParse } = require("pdf-parse");
+        const { getDocumentProxy, extractText } = require("unpdf");
         const pdfBuffer = Buffer.from(uploadedFileBase64, "base64");
-        const parser = new PDFParse({ data: pdfBuffer });
-        const pdfData = await parser.getText();
-        activeResumeText = pdfData.text;
+        
+        // Convert Node Buffer to Uint8Array required by unpdf
+        const pdfArray = new Uint8Array(pdfBuffer);
+        const pdf = await getDocumentProxy(pdfArray);
+        const { text } = await extractText(pdf, { mergePages: true });
+        activeResumeText = text;
       } catch (err: any) {
-        console.error("Error extracting text from PDF resume:", err);
+        console.error("Error extracting text from PDF resume using unpdf:", err);
         return NextResponse.json(
           { error: { message: `Failed to extract text from PDF resume: ${err.message}` } },
           { status: 400 }

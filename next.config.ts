@@ -3,7 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist"]
+  serverExternalPackages: ["pdfjs-dist"]
 };
 
 export default withSentryConfig(nextConfig, {

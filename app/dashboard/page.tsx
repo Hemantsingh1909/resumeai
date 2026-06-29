@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Download,
   ArrowRight,
+  ArrowLeft,
   RefreshCw,
   X,
   Lock,
@@ -152,6 +153,23 @@ function DashboardContent() {
   
   // App states: 1 = Upload, 2 = Job Description, 3 = Analysis, 4 = Results
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const handleStepClick = (targetStep: 1 | 2 | 3 | 4) => {
+    if (targetStep === 1) {
+      setStep(1);
+    } else if (targetStep === 2) {
+      if (resumeText.trim() !== "" || step >= 2) {
+        setStep(2);
+      }
+    } else if (targetStep === 3) {
+      if (analysisProgress > 0 || step >= 3) {
+        setStep(3);
+      }
+    } else if (targetStep === 4) {
+      if (optimizedData || step === 4) {
+        setStep(4);
+      }
+    }
+  };
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string; uploadedAt: string } | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -1069,9 +1087,11 @@ function DashboardContent() {
 
                 <div className="flex items-center justify-between pt-2">
                   <button
+                    type="button"
                     onClick={() => setStep(1)}
-                    className="text-xs font-semibold text-zinc-500 hover:text-zinc-300 cursor-pointer flex items-center gap-1"
+                    className="text-xs font-semibold text-zinc-500 hover:text-zinc-300 cursor-pointer flex items-center gap-1.5 group"
                   >
+                    <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
                     Go Back
                   </button>
 
@@ -1192,6 +1212,14 @@ function DashboardContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStep(2)}
+                    className="px-5 py-2.5 text-sm font-semibold bg-zinc-900 border border-hairline rounded-sm hover:bg-zinc-850 transition-colors cursor-pointer text-zinc-300 flex items-center gap-2 group"
+                  >
+                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                    Back
+                  </button>
+
                   <button
                     onClick={resetFlow}
                     className="px-5 py-2.5 text-sm font-semibold bg-zinc-900 border border-hairline rounded-sm hover:bg-zinc-850 transition-colors cursor-pointer text-zinc-300 flex items-center gap-2"
